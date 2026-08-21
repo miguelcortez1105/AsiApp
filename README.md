@@ -54,6 +54,7 @@ Focado no uso diário e fortalecimento da cultura interna:
 *   isadora eduarda costa franco
 *   Giovana Fróes e Silva
 *   Matheus Alcântara Pereira
+*   Nickolas Nicoleto Musico 
 
 ##  Como Executar o Projeto
 

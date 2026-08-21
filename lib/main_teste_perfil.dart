@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:asiapp_mobile/feature/home/screens/perfil_screen.dart';
+import 'package:asiapp_mobile/feature/perfil/perfil_screen.dart';
 
 void main() {
   runApp(const MyApp());

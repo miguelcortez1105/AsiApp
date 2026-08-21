@@ -20,15 +20,15 @@ void main() {
     await tester.tap(find.text('Cadastre-se'));
     await tester.pumpAndSettle();
     final signupFields = find.byType(TextFormField);
-    await tester.enterText(signupFields.at(0), 'Marina Cortez');
-    await tester.enterText(signupFields.at(1), 'marina@asimovjr.com.br');
+    await tester.enterText(signupFields.at(0), 'Miguel Cortez');
+    await tester.enterText(signupFields.at(1), 'miguel@asimovjr.com.br');
     await tester.enterText(signupFields.at(2), 'senha123');
     await tester.enterText(signupFields.at(3), 'senha123');
     await tester.tap(find.text('Criar cadastro').last);
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextFormField).at(0),
-      'marina@asimovjr.com.br',
+      'miguel@asimovjr.com.br',
     );
     await tester.enterText(find.byType(TextFormField).at(1), 'senha123');
     await tester.tap(find.text('Entrar'));
@@ -42,9 +42,19 @@ void main() {
 
     await tester.tap(find.text('Miguel Cortez'));
     await tester.pumpAndSettle();
+    expect(find.text('Meu perfil'), findsOneWidget);
     expect(find.text('Editar perfil'), findsOneWidget);
     expect(find.text('Meus projetos'), findsOneWidget);
 
+    await tester.tap(find.text('Meu perfil'));
+    await tester.pumpAndSettle();
+    expect(find.text('E-mail'), findsOneWidget);
+    expect(find.text('Membro'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Miguel Cortez'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Meus projetos'));
     await tester.pumpAndSettle();
     expect(find.text('Projetos de Miguel Cortez'), findsOneWidget);
@@ -56,10 +66,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Editar perfil'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Marina Cortez');
+    await tester.enterText(find.byType(TextField).first, 'Miguel Cortez');
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
-    expect(find.text('Marina Cortez'), findsOneWidget);
+    expect(find.text('Miguel Cortez'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Todas'));
     await tester.tap(find.text('Todas'));

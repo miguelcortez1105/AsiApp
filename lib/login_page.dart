@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'home_page.dart';
+import 'feature/home/screens/perfil_screen.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -10,8 +11,9 @@ const _coral = Color(0xFFE76F51);
 const _corporateDomain = '@asimovjr.com.br';
 
 class _Account {
-  const _Account({required this.password, required this.role});
+  const _Account({required this.name, required this.password, required this.role});
 
+  final String name;
   final String password;
   final String role;
 }
@@ -78,6 +80,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       _accounts[email] = _Account(
+        name: _nameController.text.trim(),
         password: _passwordController.text,
         role: 'Membro',
       );
@@ -93,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
       _showMessage('E-mail ou senha incorretos.');
       return;
     }
-    _openHome();
+    _openHome(account);
   }
 
   void _loginWithGoogle() {
@@ -103,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     if (_accounts.containsKey(email)) {
-      _openHome();
+      _openHome(_accounts[email]!);
     } else {
       _showMessage(
         'O login com Google é válido apenas para e-mails cadastrados.',
@@ -111,9 +114,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _openHome() {
+  void _openHome(_Account account) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const HomePage()),
+      MaterialPageRoute<void>(
+        builder: (_) => HomePage(
+          profile: UserProfile(
+            name: account.name,
+            email: _emailController.text.trim().toLowerCase(),
+            role: account.role,
+          ),
+        ),
+      ),
     );
   }
 

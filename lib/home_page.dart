@@ -80,6 +80,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
+  String _profileName = 'Miguel Cortez';
+
+  List<Project> get _profileProjects => _projects;
 
   @override
   Widget build(BuildContext context) {
@@ -156,22 +159,132 @@ class _HomePageState extends State<HomePage> {
         icon: const Icon(Icons.notifications_none_rounded, color: _ink),
       ),
       const SizedBox(width: 4),
-      const CircleAvatar(
-        radius: 18,
-        backgroundColor: Color(0xFFFFC857),
-        child: Text(
-          'MC',
-          style: TextStyle(color: _ink, fontWeight: FontWeight.w700),
+      PopupMenuButton<String>(
+        onSelected: (value) {
+          if (value == 'edit') {
+            _showEditProfileDialog();
+          } else {
+            _showProjectsDialog();
+          }
+        },
+        tooltip: 'Abrir perfil',
+        offset: const Offset(0, 48),
+        itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: 'edit',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.edit_outlined),
+              title: Text('Editar perfil'),
+            ),
+          ),
+          PopupMenuItem(
+            value: 'projects',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.folder_outlined),
+              title: Text('Meus projetos'),
+            ),
+          ),
+        ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: Color(0xFFFFC857),
+              child: Text(
+                'MC',
+                style: TextStyle(color: _ink, fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (MediaQuery.sizeOf(context).width > 520)
+              Text(
+                _profileName,
+                style: const TextStyle(
+                  color: _ink,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
         ),
       ),
-      const SizedBox(width: 10),
-      if (MediaQuery.sizeOf(context).width > 520)
-        const Text(
-          'Miguel Cortez',
-          style: TextStyle(color: _ink, fontWeight: FontWeight.w600),
-        ),
     ],
   );
+
+  Future<void> _showEditProfileDialog() async {
+    final updatedName = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        var editedName = _profileName;
+        return AlertDialog(
+          title: const Text('Editar perfil'),
+          content: TextFormField(
+            initialValue: _profileName,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (value) => editedName = value,
+            decoration: const InputDecoration(
+              labelText: 'Nome',
+              hintText: 'Digite seu nome',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = editedName.trim();
+                if (name.isNotEmpty) Navigator.pop(context, name);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (updatedName != null && mounted) {
+      setState(() => _profileName = updatedName);
+    }
+  }
+
+  void _showProjectsDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Projetos de $_profileName'),
+        content: SizedBox(
+          width: 360,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: _profileProjects.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final project = _profileProjects[index];
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: project.color.withAlpha(24),
+                  child: Icon(Icons.folder_outlined, color: project.color),
+                ),
+                title: Text(project.name),
+                subtitle: Text('${project.area} • ${project.status}'),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildWelcome() => const Column(
     crossAxisAlignment: CrossAxisAlignment.start,

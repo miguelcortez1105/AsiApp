@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # asiapp_mobile
 
 A new Flutter project.

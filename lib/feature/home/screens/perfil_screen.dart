@@ -33,6 +33,17 @@ class _PerfilScreenState extends State<PerfilScreen>{
                 child: Icon(Icons.person, size: 50),
               )
             ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: (){
+                 //logica de trocar foto   
+                },
+                child: const Text ('Alterar foto'),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
           ],
         )
       ),

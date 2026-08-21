@@ -4,10 +4,7 @@ class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
 
   @override
-  State<PerfilScreen> createState() {
-    // TODO: implement createState
-    throw _PerfilScreenState();
-  }
+  State<PerfilScreen> createState() => _PerfilScreenState();
 }
 
 class _PerfilScreenState extends State<PerfilScreen>{
@@ -44,8 +41,44 @@ class _PerfilScreenState extends State<PerfilScreen>{
             ),
             const SizedBox(height: 24),
             
-          ],
-        )
+            const Text('Nome'),
+            TextField(
+              controller: _nomeController,
+              decoration: const InputDecoration(
+                hintText: 'Digite seu nome',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Senha'),
+            TextField(
+              controller: _senhaController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                hintText: 'Digite nova senha',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Cargo'),
+            Text(
+              cargo,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
+
+            Center(
+              child: ElevatedButton(
+                onPressed: (){
+                  //firbase
+                },
+                child: const Text('Salvar alterações'),
+              ),//child
+            ),
+          ], //children
+        ),
       ),
     );
   }

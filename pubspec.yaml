@@ -54,7 +54,9 @@ dev_dependencies:
 flutter:
 
   assets:
-    - assets/logo.png
+    - assets/images/logo.png
+    - assets/images/bg_login.png
+    - assets/images/asimembro-branco.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

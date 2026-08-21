@@ -14,8 +14,25 @@ void main() {
   testWidgets('renders executive dashboard and filters projects', (
     WidgetTester tester,
   ) async {
-    // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
+
+    await tester.ensureVisible(find.text('Cadastre-se'));
+    await tester.tap(find.text('Cadastre-se'));
+    await tester.pumpAndSettle();
+    final signupFields = find.byType(TextFormField);
+    await tester.enterText(signupFields.at(0), 'Marina Cortez');
+    await tester.enterText(signupFields.at(1), 'marina@asimovjr.com.br');
+    await tester.enterText(signupFields.at(2), 'senha123');
+    await tester.enterText(signupFields.at(3), 'senha123');
+    await tester.tap(find.text('Criar cadastro').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'marina@asimovjr.com.br',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'senha123');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Faturamento acumulado'), findsOneWidget);
     expect(find.text('R\$ 8,42 mi'), findsOneWidget);

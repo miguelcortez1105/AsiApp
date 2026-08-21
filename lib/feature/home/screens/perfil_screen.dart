@@ -11,7 +11,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
 
-  String cargo = 'Membro';
+  String cargo = 'Membro'; //tem que vir do firebase
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../mngmt/gestao_de_pessoas.dart';
 import '../perfil/perfil_screen.dart';
 
 const _ink = Color(0xFF17212B);
@@ -169,6 +170,8 @@ class _HomePageState extends State<HomePage> {
             _openProfile();
           } else if (value == 'edit') {
             _showEditProfileDialog();
+          } else if (value == 'people') {
+            _openPeopleManagement();
           } else {
             _showProjectsDialog();
           }
@@ -198,6 +201,14 @@ class _HomePageState extends State<HomePage> {
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.folder_outlined),
               title: Text('Meus projetos'),
+            ),
+          ),
+          PopupMenuItem(
+            value: 'people',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.groups_outlined),
+              title: Text('Gestão de pessoas'),
             ),
           ),
         ],
@@ -272,6 +283,14 @@ class _HomePageState extends State<HomePage> {
     if (updatedProfile != null && mounted) {
       setState(() => _profile = updatedProfile);
     }
+  }
+
+  void _openPeopleManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GestaoDePessoas(currentProfile: _profile),
+      ),
+    );
   }
 
   void _showProjectsDialog() {

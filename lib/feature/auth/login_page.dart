@@ -114,6 +114,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // TEMPORARIO: este botao ignora cadastro e login; removo antes da entrega.
+  void _skipAuthentication() {
+    _openHome(
+      const _Account(
+        name: 'Acesso temporario',
+        password: '',
+        role: 'Visitante',
+      ),
+    );
+  }
+
   void _openHome(_Account account) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -387,6 +398,11 @@ class _LoginPageState extends State<LoginPage> {
               icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
               label: const Text('Continuar com Google'),
             ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: _skipAuthentication,
+            child: const Text('Acessar sem cadastro ou login'),
           ),
         ],
         const SizedBox(height: 22),

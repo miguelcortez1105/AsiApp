@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'feature/home/screens/perfil_screen.dart';
+
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
 const _paper = Color(0xFFF5F7F8);
@@ -28,7 +30,7 @@ class Project {
   final Color color;
 }
 
-const _projects = [
+const projects = [
   Project(
     name: 'Portal de Clientes',
     area: 'Digital',
@@ -72,7 +74,9 @@ const _projects = [
 ];
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.profile = const UserProfile(name: 'Miguel Cortez', email: 'miguel@asimovjr.com.br')});
+
+  final UserProfile profile;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -80,15 +84,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
-  String _profileName = 'Miguel Cortez';
+  late UserProfile _profile = widget.profile;
 
-  List<Project> get _profileProjects => _projects;
+  List<Project> get _profileProjects => projects;
 
   @override
   Widget build(BuildContext context) {
     final filteredProjects = _selectedArea == 'Todas'
-        ? _projects
-        : _projects.where((project) => project.area == _selectedArea).toList();
+        ? projects
+        : projects.where((project) => project.area == _selectedArea).toList();
     return Scaffold(
       backgroundColor: _paper,
       body: SafeArea(
@@ -161,7 +165,9 @@ class _HomePageState extends State<HomePage> {
       const SizedBox(width: 4),
       PopupMenuButton<String>(
         onSelected: (value) {
-          if (value == 'edit') {
+          if (value == 'profile') {
+            _openProfile();
+          } else if (value == 'edit') {
             _showEditProfileDialog();
           } else {
             _showProjectsDialog();
@@ -170,6 +176,14 @@ class _HomePageState extends State<HomePage> {
         tooltip: 'Abrir perfil',
         offset: const Offset(0, 48),
         itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: 'profile',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.account_circle_outlined),
+              title: Text('Meu perfil'),
+            ),
+          ),
           PopupMenuItem(
             value: 'edit',
             child: ListTile(
@@ -190,18 +204,18 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
               backgroundColor: Color(0xFFFFC857),
               child: Text(
-                'MC',
-                style: TextStyle(color: _ink, fontWeight: FontWeight.w700),
+                _initials(_profile.name),
+                style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(width: 10),
             if (MediaQuery.sizeOf(context).width > 520)
               Text(
-                _profileName,
+                _profile.name,
                 style: const TextStyle(
                   color: _ink,
                   fontWeight: FontWeight.w600,
@@ -217,11 +231,11 @@ class _HomePageState extends State<HomePage> {
     final updatedName = await showDialog<String>(
       context: context,
       builder: (context) {
-        var editedName = _profileName;
+        var editedName = _profile.name;
         return AlertDialog(
           title: const Text('Editar perfil'),
           content: TextFormField(
-            initialValue: _profileName,
+            initialValue: _profile.name,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
             onChanged: (value) => editedName = value,
@@ -247,7 +261,16 @@ class _HomePageState extends State<HomePage> {
       },
     );
     if (updatedName != null && mounted) {
-      setState(() => _profileName = updatedName);
+      setState(() => _profile = _profile.copyWith(name: updatedName));
+    }
+  }
+
+  Future<void> _openProfile() async {
+    final updatedProfile = await Navigator.of(context).push<UserProfile>(
+      MaterialPageRoute(builder: (_) => PerfilScreen(profile: _profile)),
+    );
+    if (updatedProfile != null && mounted) {
+      setState(() => _profile = updatedProfile);
     }
   }
 
@@ -255,7 +278,7 @@ class _HomePageState extends State<HomePage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Projetos de $_profileName'),
+        title: Text('Projetos de ${_profile.name}'),
         content: SizedBox(
           width: 360,
           child: ListView.separated(
@@ -286,7 +309,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildWelcome() => const Column(
+  Widget _buildWelcome() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
@@ -300,8 +323,8 @@ class _HomePageState extends State<HomePage> {
       ),
       SizedBox(height: 8),
       Text(
-        'Bom dia, Miguel.',
-        style: TextStyle(
+        'Bom dia, ${_profile.name.split(' ').first}.',
+        style: const TextStyle(
           color: _ink,
           fontSize: 32,
           fontWeight: FontWeight.w800,
@@ -527,6 +550,12 @@ class _HomePageState extends State<HomePage> {
       ),
       itemBuilder: (context, index) => _ProjectCard(project: projects[index]),
     );
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 }
 

@@ -11,7 +11,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const PerfilScreen(), // aqui é a mudança principal
+      home: const PerfilScreen(
+        profile: UserProfile(
+          name: 'Miguel Cortez',
+          email: 'miguel@asimovjr.com.br',
+        ),
+      ),
     );
   }
 }

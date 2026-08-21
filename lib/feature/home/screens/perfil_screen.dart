@@ -10,8 +10,18 @@ class PerfilScreen extends StatefulWidget {
 class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-
+  bool _senhaVisivel = false;
   String cargo = 'Membro'; //tem que vir do firebase
+
+  void _salvarPerfil() {
+   // FIREBASE
+  
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+       content: Text('Perfil salvo com sucesso!'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,10 +64,20 @@ class _PerfilScreenState extends State<PerfilScreen>{
             const Text('Senha'),
             TextField(
               controller: _senhaController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'Digite nova senha',
-                border: OutlineInputBorder(),
+              obscureText: !_senhaVisivel,
+              decoration: InputDecoration(
+                hintText: 'Digite sua nova senha',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _senhaVisivel ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _senhaVisivel = !_senhaVisivel;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -71,9 +91,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
 
             Center(
               child: ElevatedButton(
-                onPressed: (){
-                  //firbase
-                },
+                onPressed: _salvarPerfil,
                 child: const Text('Salvar alterações'),
               ),//child
             ),

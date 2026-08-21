@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'home_page.dart';
-import 'feature/home/screens/perfil_screen.dart';
+import '../home/home_page.dart';
+import '../perfil/perfil_screen.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);

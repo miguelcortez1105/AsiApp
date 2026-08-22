@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_svg: ^2.0.0
   google_fonts: ^6.2.1
   flutter:
     sdk: flutter
@@ -55,8 +56,11 @@ flutter:
 
   assets:
     - assets/images/logo.png
-    - assets/images/bg_login.png
+    - assets/images/bg_login_celular.png
+    - assets/images/bg_login_tablet.png
     - assets/images/asimembro-branco.png
+    - assets/images/asimembro-branco.svg
+    - assets/images/google.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

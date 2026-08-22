@@ -14,6 +14,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
   bool _senhaVisivel = false;
+  final _formKey = GlobalKey<FormState>();
   String cargo = 'Membro'; //tem que vir do firebase
 
   Uint8List? _fotoPerfilBytes; 
@@ -47,14 +48,13 @@ class _PerfilScreenState extends State<PerfilScreen>{
   }
 
   void _salvarPerfil() {
-   // FIREBASE
-  
+  if (_formKey.currentState!.validate()) {
+    // FIREBASE
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-       content: Text('Perfil salvo com sucesso!'),
-      ),
+      const SnackBar(content: Text('Perfil salvo com sucesso!')),
     );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -64,72 +64,88 @@ class _PerfilScreenState extends State<PerfilScreen>{
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment:CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _fotoPerfilBytes != null ? MemoryImage(_fotoPerfilBytes!) : null,
-                child: _fotoPerfilBytes == null
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment:CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _fotoPerfilBytes != null ? MemoryImage(_fotoPerfilBytes!) : null,
+                  child: _fotoPerfilBytes == null
                     ? const Icon(Icons.person, size: 50)
                     : null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton(
-                onPressed: _selecionarFoto,
-                child: const Text ('Alterar foto'),
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            const Text('Nome'),
-            TextField(
-              controller: _nomeController,
-              decoration: const InputDecoration(
-                hintText: 'Digite seu nome',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            const Text('Senha'),
-            TextField(
-              controller: _senhaController,
-              obscureText: !_senhaVisivel,
-              decoration: InputDecoration(
-                hintText: 'Digite sua nova senha',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _senhaVisivel ? Icons.visibility : Icons.visibility_off,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _senhaVisivel = !_senhaVisivel;
-                    });
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: _selecionarFoto,
+                    child: const Text ('Alterar foto'),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                const Text('Nome'),
+                TextFormField(
+                  controller: _nomeController,
+                  decoration: const InputDecoration(
+                    hintText: 'Digite seu nome',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (valor) {
+                    if (valor == null || valor.trim().isEmpty) {
+                      return 'Digite seu nome';
+                    }
+                    return null;
                   },
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            const Text('Cargo'),
-            Text(
-              cargo,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
+                const Text('Senha'),
+                TextFormField(
+                  controller: _senhaController,
+                  obscureText: !_senhaVisivel,
+                  decoration: InputDecoration(
+                    hintText: 'Digite sua nova senha',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(_senhaVisivel ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _senhaVisivel = !_senhaVisivel;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) {
+                      return 'Digite uma senha';
+                    }
+                    if (valor.length < 6) {
+                      return 'A senha precisa ter no mínimo 6 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
 
-            Center(
-              child: ElevatedButton(
-                onPressed: _salvarPerfil,
-                child: const Text('Salvar alterações'),
-              ),//child
+                const Text('Cargo'),
+                Text(
+                  cargo,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _salvarPerfil,
+                    child: const Text('Salvar alterações'),
+                  ),//child
+                ),
+              ], //children
             ),
-          ], //children
         ),
       ),
     );

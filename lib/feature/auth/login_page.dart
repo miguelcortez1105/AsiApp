@@ -112,6 +112,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // TEMPORARIO: este botao ignora cadastro e login; removo antes da entrega.
+  void _skipAuthentication() {
+    _openHome(
+      const _Account(
+        name: 'Acesso temporario',
+        password: '',
+        role: 'Visitante',
+      ),
+    );
+  }
+
   void _openHome(_Account account) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -185,7 +196,7 @@ Widget build(BuildContext context) {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints: const BoxConstraints(maxWidth: 306),
               child: _buildFormPanel(),
             ),
           ),
@@ -204,7 +215,7 @@ Widget build(BuildContext context) {
         const SizedBox(height: 6),
         Center(
           child: Text(
-            _isSignUp ? 'Faça Cadastro para continuar' : 'Faça Login para continuar',
+            _isSignUp ? 'Faça o Cadastro para continuar' : 'Faça o Login para continuar',
             style: AppTextStyles.body.copyWith(color: AppColors.white),
           ),
           
@@ -366,7 +377,22 @@ Widget build(BuildContext context) {
             ),
           ),
         ],
-        const SizedBox(height: 22),
+        //TEMPORARIO 
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+          onPressed: _skipAuthentication,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+            ),
+            child: Text('Acessar sem cadastro ou login',
+            style: AppTextStyles.caption.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.80),
+                  fontWeight: FontWeight.w400),
+            )
+          ),
+        )
+        
       ],
     ),
   );

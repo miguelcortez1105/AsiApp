@@ -14,8 +14,11 @@ class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
   bool _senhaVisivel = false;
+  final TextEditingController _confirmarSenhaController = TextEditingController();
+  bool _confirmarSenhaVisivel = false;
   final _formKey = GlobalKey<FormState>();
   String cargo = 'Membro'; //tem que vir do firebase
+  bool _carregando = false;
 
   Uint8List? _fotoPerfilBytes; 
   Future<void> _selecionarFoto() async {
@@ -47,14 +50,55 @@ class _PerfilScreenState extends State<PerfilScreen>{
     });
   }
 
-  void _salvarPerfil() {
-  if (_formKey.currentState!.validate()) {
-    // FIREBASE
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Perfil salvo com sucesso!')),
+  Future<void> _salvarPerfil() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _carregando = true;
+      });
+
+      // FIREBASE
+      await Future.delayed(const Duration(seconds: 2));
+      //mudar isso com o firebase
+      setState(() {
+        _carregando = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Perfil salvo com sucesso!')),
+      );
+    }
+  }
+  void _sairDaConta() {
+    //substituir por lógica real de logout (Firebase Auth) quando conectado
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da conta'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: navegar de volta pra tela de login
+            },
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
     );
   }
-}
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +175,36 @@ class _PerfilScreenState extends State<PerfilScreen>{
                 ),
                 const SizedBox(height: 16),
 
+                const SizedBox(height: 16),
+                const Text('Confirmar senha'),
+                TextFormField(
+                  controller: _confirmarSenhaController,
+                  obscureText: !_confirmarSenhaVisivel,
+                  decoration: InputDecoration(
+                    hintText: 'Digite a senha novamente',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _confirmarSenhaVisivel ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _confirmarSenhaVisivel = !_confirmarSenhaVisivel;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) {
+                      return 'Confirme sua senha';
+                    }
+                    if (valor != _senhaController.text) {
+                      return 'As senhas não coincidem';
+                    }
+                    return null;
+                  },
+                ),
+
                 const Text('Cargo'),
                 Text(
                   cargo,
@@ -140,9 +214,24 @@ class _PerfilScreenState extends State<PerfilScreen>{
 
                 Center(
                   child: ElevatedButton(
-                    onPressed: _salvarPerfil,
-                    child: const Text('Salvar alterações'),
-                  ),//child
+                    onPressed: _carregando ? null : _salvarPerfil,
+                    child: _carregando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Salvar alterações'),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+                Center(
+                  child: TextButton(
+                    onPressed: _sairDaConta,
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Sair da conta'),
+                  ),
                 ),
               ], //children
             ),

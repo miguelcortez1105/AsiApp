@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
+import 'package:image_cropper/image_cropper.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -12,6 +15,36 @@ class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _senhaController = TextEditingController();
   bool _senhaVisivel = false;
   String cargo = 'Membro'; //tem que vir do firebase
+
+  Uint8List? _fotoPerfilBytes; 
+  Future<void> _selecionarFoto() async {
+    final picker = ImagePicker();
+    final imagemEscolhida = await picker.pickImage(source: ImageSource.gallery);
+
+    if (imagemEscolhida == null) return;
+
+    final imagemRecortada = await ImageCropper().cropImage(
+      sourcePath: imagemEscolhida.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Ajustar foto',
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Ajustar foto',
+          aspectRatioLockEnabled: true,
+        ),
+      ],
+    );
+
+    if (imagemRecortada == null) return;
+
+    final bytes = await imagemRecortada.readAsBytes();
+    setState(() {
+      _fotoPerfilBytes = bytes;
+    });
+  }
 
   void _salvarPerfil() {
    // FIREBASE
@@ -34,18 +67,19 @@ class _PerfilScreenState extends State<PerfilScreen>{
         child: Column(
           crossAxisAlignment:CrossAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: CircleAvatar(
                 radius: 50,
-                child: Icon(Icons.person, size: 50),
-              )
+                backgroundImage: _fotoPerfilBytes != null ? MemoryImage(_fotoPerfilBytes!) : null,
+                child: _fotoPerfilBytes == null
+                    ? const Icon(Icons.person, size: 50)
+                    : null,
+              ),
             ),
             const SizedBox(height: 8),
             Center(
               child: TextButton(
-                onPressed: (){
-                 //logica de trocar foto   
-                },
+                onPressed: _selecionarFoto,
                 child: const Text ('Alterar foto'),
               ),
             ),

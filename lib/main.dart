@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:asiapp_mobile/feature/home/screens/perfil_screen.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -30,7 +29,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const PerfilScreen(),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }

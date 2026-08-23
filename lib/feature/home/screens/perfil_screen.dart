@@ -23,7 +23,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
   Uint8List? _fotoPerfilBytes; 
   Future<void> _selecionarFoto() async {
     final picker = ImagePicker();
-    final imagemEscolhida = await picker.pickImage(source: ImageSource.camera);
+    final imagemEscolhida = await picker.pickImage(source: ImageSource.gallery);
 
     if (imagemEscolhida == null) return;
 

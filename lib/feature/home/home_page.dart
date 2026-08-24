@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../mngmt/gestao_de_pessoas.dart';
+import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
 
 const _ink = Color(0xFF17212B);
@@ -75,7 +76,13 @@ const projects = [
 ];
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.profile = const UserProfile(name: 'Miguel Cortez', email: 'miguel@asimovjr.com.br')});
+  const HomePage({
+    super.key,
+    this.profile = const UserProfile(
+      name: 'Miguel Cortez',
+      email: 'miguel@asimovjr.com.br',
+    ),
+  });
 
   final UserProfile profile;
 
@@ -172,13 +179,15 @@ class _HomePageState extends State<HomePage> {
             _showEditProfileDialog();
           } else if (value == 'people') {
             _openPeopleManagement();
+          } else if (value == 'finance') {
+            _openFinancialManagement();
           } else {
             _showProjectsDialog();
           }
         },
         tooltip: 'Abrir perfil',
         offset: const Offset(0, 48),
-        itemBuilder: (context) => const [
+        itemBuilder: (context) => [
           PopupMenuItem(
             value: 'profile',
             child: ListTile(
@@ -211,6 +220,19 @@ class _HomePageState extends State<HomePage> {
               title: Text('Gestão de pessoas'),
             ),
           ),
+          if (const {
+            'Presidência',
+            'Diretoria',
+            'Desenvolvedor',
+          }.contains(_profile.role))
+            const PopupMenuItem(
+              value: 'finance',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.account_balance_outlined),
+                title: Text('Gestão financeira'),
+              ),
+            ),
         ],
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -220,7 +242,10 @@ class _HomePageState extends State<HomePage> {
               backgroundColor: Color(0xFFFFC857),
               child: Text(
                 _initials(_profile.name),
-                style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -289,6 +314,14 @@ class _HomePageState extends State<HomePage> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => GestaoDePessoas(currentProfile: _profile),
+      ),
+    );
+  }
+
+  void _openFinancialManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GestaoFinanceira(currentProfile: _profile),
       ),
     );
   }

@@ -8,8 +8,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 const _corporateDomain = '@asimovjr.com.br';
 
+// TEMPORARIO: remover quando o controle real de cargos estiver integrado.
+const _temporaryDeveloperRole = 'Desenvolvedor';
+
 class _Account {
-  const _Account({required this.name, required this.password, required this.role});
+  const _Account({
+    required this.name,
+    required this.password,
+    required this.role,
+  });
 
   final String name;
   final String password;
@@ -80,12 +87,12 @@ class _LoginPageState extends State<LoginPage> {
       _accounts[email] = _Account(
         name: _nameController.text.trim(),
         password: _passwordController.text,
-        role: 'Membro',
+        role: _temporaryDeveloperRole,
       );
       setState(() => _isSignUp = false);
       _passwordController.clear();
       _confirmPasswordController.clear();
-      _showMessage('Cadastro criado como Membro. Faça seu login.');
+      _showMessage('Cadastro criado como Desenvolvedor. Faça seu login.');
       return;
     }
 
@@ -118,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
       const _Account(
         name: 'Acesso temporario',
         password: '',
-        role: 'Visitante',
+        role: _temporaryDeveloperRole,
       ),
     );
   }
@@ -130,7 +137,8 @@ class _LoginPageState extends State<LoginPage> {
           profile: UserProfile(
             name: account.name,
             email: _emailController.text.trim().toLowerCase(),
-            role: account.role,
+            // TEMPORARIO: remover quando o cargo vier do backend/perfil persistido.
+            role: _temporaryDeveloperRole,
           ),
         ),
       ),
@@ -173,38 +181,38 @@ class _LoginPageState extends State<LoginPage> {
     ).then((_) => controller.dispose());
   }
 
-@override
-Widget build(BuildContext context) {
-  final screenWidth = MediaQuery.sizeOf(context).width;
-  final backgroundImage = screenWidth >= 900
-      ? 'assets/images/bg_login_tablet.png'
-      : 'assets/images/bg_login_celular.png';
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final backgroundImage = screenWidth >= 900
+        ? 'assets/images/bg_login_tablet.png'
+        : 'assets/images/bg_login_celular.png';
 
-  return Scaffold(
-    backgroundColor: Colors.transparent,
-    body: Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(backgroundImage),
-          fit: BoxFit.cover,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(backgroundImage),
+            fit: BoxFit.cover,
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 306),
-              child: _buildFormPanel(),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 306),
+                child: _buildFormPanel(),
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildFormPanel() => Form(
     key: _formKey,
@@ -215,10 +223,11 @@ Widget build(BuildContext context) {
         const SizedBox(height: 6),
         Center(
           child: Text(
-            _isSignUp ? 'Faça o Cadastro para continuar' : 'Faça o Login para continuar',
+            _isSignUp
+                ? 'Faça o Cadastro para continuar'
+                : 'Faça o Login para continuar',
             style: AppTextStyles.body.copyWith(color: AppColors.white),
           ),
-          
         ),
         const SizedBox(height: 26),
         if (_isSignUp) ...[
@@ -271,34 +280,35 @@ Widget build(BuildContext context) {
             },
             suffix: IconButton(
               tooltip: 'Mostrar confirmação',
-              onPressed: () => setState(
-                () => _obscureConfirmation = !_obscureConfirmation,
-              ),
+              onPressed: () =>
+                  setState(() => _obscureConfirmation = !_obscureConfirmation),
               icon: Icon(
                 _obscureConfirmation
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                  color: AppColors.white,
+                color: AppColors.white,
               ),
             ),
           ),
         ],
         if (!_isSignUp)
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: _showForgotPassword,
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.only(top: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Esqueceu a senha?',
-              style: AppTextStyles.caption.copyWith(color: AppColors.white.withValues(alpha: 0.80),),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _showForgotPassword,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.only(top: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'Esqueceu a senha?',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.80),
+                ),
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 50),
         SizedBox(
           height: 52,
@@ -317,14 +327,16 @@ Widget build(BuildContext context) {
           children: [
             Text(
               _isSignUp ? 'Já possui uma conta? ' : 'Não possui uma conta? ',
-              style: AppTextStyles.caption.copyWith(color: AppColors.white.withValues(alpha: 0.80)),
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.white.withValues(alpha: 0.80),
+              ),
             ),
             TextButton(
               onPressed: () => setState(() {
                 _isSignUp = !_isSignUp;
                 _formKey.currentState?.reset();
               }),
-              style: TextButton.styleFrom(          
+              style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -348,9 +360,7 @@ Widget build(BuildContext context) {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   'Ou',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.white,
-                  ),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
                 ),
               ),
               const Expanded(child: Divider(color: AppColors.line)),
@@ -366,59 +376,64 @@ Widget build(BuildContext context) {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Image.asset('assets/images/google.png', width: 18, height: 18),
+                    child: Image.asset(
+                      'assets/images/google.png',
+                      width: 18,
+                      height: 18,
+                    ),
                   ),
-                Text(
-                  'Faça login com o Google',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
-                ),
-                ]
+                  Text(
+                    'Faça login com o Google',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
-        //TEMPORARIO 
+        //TEMPORARIO
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-          onPressed: _skipAuthentication,
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
+            onPressed: _skipAuthentication,
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            child: Text(
+              'Acessar sem cadastro ou login',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.white.withValues(alpha: 0.80),
+                fontWeight: FontWeight.w400,
+              ),
             ),
-            child: Text('Acessar sem cadastro ou login',
-            style: AppTextStyles.caption.copyWith(
-                  color: AppColors.white.withValues(alpha: 0.80),
-                  fontWeight: FontWeight.w400),
-            )
           ),
-        )
-        
+        ),
       ],
     ),
   );
 
   Widget _buildBrand() => Column(
     children: [
-      
       const SizedBox(height: 171),
 
-      SvgPicture.asset(
-        'assets/images/asimembro-branco.svg',
-      ),
+      SvgPicture.asset('assets/images/asimembro-branco.svg'),
 
       const SizedBox(height: 12),
       RichText(
-      text: TextSpan(
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.white,
-          letterSpacing: 1.3,
+        text: TextSpan(
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.white,
+            letterSpacing: 1.3,
+          ),
+          children: const [
+            TextSpan(text: 'Bem vindo ao '),
+            TextSpan(
+              text: 'AsiApp!',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
         ),
-        children: const [ 
-          TextSpan(text: 'Bem vindo ao '),
-          TextSpan(text: 'AsiApp!', style: TextStyle(fontWeight: FontWeight.w700))
-        ],
       ),
-      )
     ],
   );
 

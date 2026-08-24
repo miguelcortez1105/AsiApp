@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
+import 'package:asiapp_mobile/feature/home/screens/menu_postagem_screen.dart';
+import 'package:asiapp_mobile/feature/home/screens/aba_calendario.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(

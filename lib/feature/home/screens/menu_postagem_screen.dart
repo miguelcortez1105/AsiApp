@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:asiapp_mobile/feature/home/screens/aba_calendario.dart';
 
 class MenuPostagemScreen extends StatefulWidget {
   const MenuPostagemScreen({super.key});
@@ -39,10 +40,10 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          Center(child: Text('Aba Calendário')),
-          Center(child: Text('Aba Cadastro de Postagem')),
-          Center(child: Text('Aba Feed Social')),
+        children: [
+          const AbaCalendario(),
+          const Center(child: Text('Aba Cadastro de Postagem')),
+          const Center(child: Text('Aba Feed Social')),
         ],
       ),
     );

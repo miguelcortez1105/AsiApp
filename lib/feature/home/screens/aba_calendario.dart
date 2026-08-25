@@ -29,17 +29,17 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   };
 
   final Map<String, Color> _coresPorArea = {
-    'Geral': Colors.blue,
-    'Mobile': Colors.green,
-    'Comissão Eventos': Colors.pink,
-    'Comissão Processo Seletivo': Colors.deepPurple,
-    'Vendas': Colors.orange,
-    'Marketing': Colors.red,
+    'Geral': Colors.black,
     'Ciência de Dados': Colors.teal,
-    'Desktop': Colors.indigo,
-    'RH': Colors.brown,
-    'Presidência': Colors.black,
+    'Comissão Eventos': Colors.brown,
+    'Comissão Processo Seletivo': Colors.indigo,
+    'Desktop':Colors.green,
     'Gerentes': Colors.amber,
+    'Marketing': Colors.pink,
+    'Mobile': Colors.deepPurple,
+    'Presidência':Colors.red,
+    'RH': Colors.cyan,
+    'Vendas': Colors.orange,
   };
 
   @override
@@ -52,6 +52,122 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     final diaSemHora = DateTime.utc(dia.year, dia.month, dia.day);
     return _eventosSimulados[diaSemHora] ?? [];
   }
+
+  void _abrirFormularioEvento() {
+    final tituloController = TextEditingController();
+    final horarioController = TextEditingController();
+    List<String> areasSelecionadas = [];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Novo evento'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: tituloController,
+                      decoration: const InputDecoration(labelText: 'Título'),
+                    ),
+                    TextField(
+                      controller: horarioController,
+                      decoration: const InputDecoration(labelText: 'Horário (ex: 18:00)'),
+                    ),
+                    const SizedBox(height: 12),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Áreas envolvidas'),
+                    ),
+                    ..._coresPorArea.keys.map((area) {
+                      return CheckboxListTile(
+                        title: Text(area),
+                        value: areasSelecionadas.contains(area),
+                        onChanged: (marcado) {
+                          setStateDialog(() {
+                            if (marcado == true) {
+                              areasSelecionadas.add(area);
+                            } else {
+                              areasSelecionadas.remove(area);
+                            }
+                          });
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (tituloController.text.trim().isEmpty) return;
+                    if (areasSelecionadas.isEmpty) return;
+
+                    final diaEscolhido = _diaSelecionado ?? _diaFocado;
+                    final diaSemHora = DateTime.utc(
+                      diaEscolhido.year,
+                      diaEscolhido.month,
+                      diaEscolhido.day,
+                    );
+
+                    setState(() {
+                      _eventosSimulados.putIfAbsent(diaSemHora, () => []);
+                      _eventosSimulados[diaSemHora]!.add(
+                        Evento(
+                          titulo: tituloController.text.trim(),
+                          horario: horarioController.text.trim(),
+                          areas: areasSelecionadas,
+                        ),
+                      );
+                    });
+
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Criar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+Widget _buildLegenda() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    child: Wrap(
+      spacing: 12,
+      runSpacing: 6,
+      children: _coresPorArea.entries.map((entrada) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: entrada.value,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              entrada.key,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        );
+      }).toList(),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +191,12 @@ class _AbaCalendarioState extends State<AbaCalendario> {
               markerBuilder: (context, dia, eventos) {
                 if (eventos.isEmpty) return null;
 
-                final coresDoDia = eventos
-                    .map((evento) => _coresPorArea[(evento as Evento).areas] ?? Colors.grey)
-                    .toSet();
+                final coresDoDia = <Color>{};
+                for (final evento in eventos) {
+                  for (final area in (evento as Evento).areas) {
+                    coresDoDia.add(_coresPorArea[area] ?? Colors.grey);
+                  }
+                }
 
                 return Positioned(
                   bottom: 4,
@@ -99,6 +218,8 @@ class _AbaCalendarioState extends State<AbaCalendario> {
               },
             ),
           ),
+
+          _buildLegenda(),
           const SizedBox(height: 16),
           Expanded(
             child: _eventosDoDia(_diaSelecionado ?? _diaFocado).isEmpty
@@ -110,7 +231,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                       return ListTile(
                         leading: const Icon(Icons.event),
                         title: Text(evento.titulo),
-                        subtitle: Text(evento.horario),
+                        subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
                       );
                     },
                   ),
@@ -118,13 +239,11 @@ class _AbaCalendarioState extends State<AbaCalendario> {
         ],
       ),
       floatingActionButton: _podeEditarEventos
-          ? FloatingActionButton(
-              onPressed: () {
-                // TODO: abrir tela/formulário de criar evento
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
+        ? FloatingActionButton(
+            onPressed: _abrirFormularioEvento,
+            child: const Icon(Icons.add),
+          )
+        : null,
     );
   }
 }

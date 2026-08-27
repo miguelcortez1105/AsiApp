@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../home/home_page.dart';
 import '../perfil/perfil_screen.dart';
@@ -11,17 +12,7 @@ const _corporateDomain = '@asimovjr.com.br';
 // TEMPORARIO: remover quando o controle real de cargos estiver integrado.
 const _temporaryDeveloperRole = 'Desenvolvedor';
 
-class _Account {
-  const _Account({
-    required this.name,
-    required this.password,
-    required this.role,
-  });
 
-  final String name;
-  final String password;
-  final String role;
-}
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -36,7 +27,6 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final Map<String, _Account> _accounts = {};
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
@@ -75,69 +65,120 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    final email = _emailController.text.trim().toLowerCase();
+  Future<void> _submit() async {
+  if (!_formKey.currentState!.validate()) return;
 
+  final email = _emailController.text.trim().toLowerCase();
+  final password = _passwordController.text;
+
+  try {
     if (_isSignUp) {
-      if (_accounts.containsKey(email)) {
-        _showMessage('Este e-mail já possui cadastro.');
-        return;
-      }
-      _accounts[email] = _Account(
-        name: _nameController.text.trim(),
-        password: _passwordController.text,
-        role: _temporaryDeveloperRole,
+      final credential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
+
+      await credential.user?.updateDisplayName(
+        _nameController.text.trim(),
+      );
+
+      if (!mounted) return;
+
       setState(() => _isSignUp = false);
+
       _passwordController.clear();
       _confirmPasswordController.clear();
-      _showMessage('Cadastro criado como Desenvolvedor. Faça seu login.');
+
+      _showMessage(
+        'Cadastro criado com sucesso! Faça seu login.',
+      );
+
       return;
     }
 
-    final account = _accounts[email];
-    if (account == null || account.password != _passwordController.text) {
-      _showMessage('E-mail ou senha incorretos.');
-      return;
+    final credential =
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    _openHome(credential.user!);
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+
+    switch (e.code) {
+      case 'email-already-in-use':
+        _showMessage('Este e-mail já possui cadastro.');
+        break;
+
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        _showMessage('E-mail ou senha incorretos.');
+        break;
+
+      case 'invalid-email':
+        _showMessage('Digite um e-mail válido.');
+        break;
+
+      case 'weak-password':
+        _showMessage('A senha é muito fraca.');
+        break;
+
+      case 'user-disabled':
+        _showMessage('Esta conta foi desativada.');
+        break;
+
+      default:
+        _showMessage(
+          'Não foi possível realizar a autenticação.',
+        );
     }
-    _openHome(account);
+  } catch (e) {
+    if (!mounted) return;
+
+    _showMessage(
+      'Ocorreu um erro. Tente novamente.',
+    );
+  }
   }
 
-  void _loginWithGoogle() {
-    final email = _emailController.text.trim().toLowerCase();
-    if (email.isEmpty) {
-      _showMessage('Informe seu e-mail para continuar com o Google.');
+  Future<void> _sendPasswordReset(String email) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) {
+      _showMessage('Informe seu e-mail para recuperar a senha.');
       return;
     }
-    if (_accounts.containsKey(email)) {
-      _openHome(_accounts[email]!);
-    } else {
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: normalizedEmail,
+      );
+      if (!mounted) return;
       _showMessage(
-        'O login com Google é válido apenas para e-mails cadastrados.',
+        'Se o e-mail estiver cadastrado, enviaremos as instruções.',
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      _showMessage(
+        e.code == 'invalid-email'
+            ? 'Digite um e-mail válido.'
+            : 'Não foi possível enviar as instruções.',
       );
     }
   }
 
-  // TEMPORARIO: este botao ignora cadastro e login; removo antes da entrega.
-  void _skipAuthentication() {
-    _openHome(
-      const _Account(
-        name: 'Acesso temporario',
-        password: '',
-        role: _temporaryDeveloperRole,
-      ),
-    );
-  }
-
-  void _openHome(_Account account) {
+  void _openHome(User user) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => HomePage(
           profile: UserProfile(
-            name: account.name,
-            email: _emailController.text.trim().toLowerCase(),
-            // TEMPORARIO: remover quando o cargo vier do backend/perfil persistido.
+            name: user.displayName ?? 'Usuário',
+            email: user.email ?? '',
+            // TEMPORÁRIO: cargo ainda não vem do backend.
             role: _temporaryDeveloperRole,
           ),
         ),
@@ -168,11 +209,9 @@ class _LoginPageState extends State<LoginPage> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _showMessage(
-                'Se o e-mail estiver cadastrado, enviaremos as instruções.',
-              );
+              await _sendPasswordReset(controller.text);
             },
             child: const Text('Enviar'),
           ),
@@ -350,63 +389,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ],
-        ),
-        if (!_isSignUp) ...[
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              const Expanded(child: Divider(color: AppColors.line)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'Ou',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
-                ),
-              ),
-              const Expanded(child: Divider(color: AppColors.line)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 50,
-            child: OutlinedButton(
-              onPressed: _loginWithGoogle,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Image.asset(
-                      'assets/images/google.png',
-                      width: 18,
-                      height: 18,
-                    ),
-                  ),
-                  Text(
-                    'Faça login com o Google',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-        //TEMPORARIO
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: _skipAuthentication,
-            style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            child: Text(
-              'Acessar sem cadastro ou login',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.white.withValues(alpha: 0.80),
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
         ),
       ],
     ),

@@ -138,16 +138,45 @@ class _LoginPageState extends State<LoginPage> {
         _showMessage('Esta conta foi desativada.');
         break;
 
+      case 'operation-not-allowed':
+        _showMessage('O login por e-mail e senha está desativado no Firebase.');
+        break;
+
+      case 'too-many-requests':
+        _showMessage('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+        break;
+
+      case 'network-request-failed':
+        _showMessage('Falha de conexão. Verifique sua internet e tente novamente.');
+        break;
+
+      case 'auth-domain-config-required':
+        _showMessage('O domínio de autenticação não está configurado no Firebase.');
+        break;
+
+      case 'requires-recent-login':
+        _showMessage('Sua sessão expirou. Faça login novamente.');
+        break;
+
       default:
         _showMessage(
-          'Não foi possível realizar a autenticação.',
+          'Erro de autenticação (${e.code}). ${e.message ?? 'Verifique as configurações do Firebase.'}',
         );
     }
-  } catch (e) {
+  } on FirebaseException catch (e) {
+    debugPrint('Erro do Firebase após o login: ${e.plugin}/${e.code}: ${e.message}');
     if (!mounted) return;
 
     _showMessage(
-      'Ocorreu um erro. Tente novamente.',
+      'Erro no ${e.plugin} (${e.code}). ${e.message ?? 'Verifique as regras e a conexão.'}',
+    );
+  } catch (e, stackTrace) {
+    debugPrint('Erro inesperado no login: $e');
+    debugPrintStack(stackTrace: stackTrace);
+    if (!mounted) return;
+
+    _showMessage(
+      'Erro inesperado: $e',
     );
   }
   }

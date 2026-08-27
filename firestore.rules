@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function level(role) {
+      return role == 'Membro' ? 1 :
+        role == 'Gerência' ? 2 :
+        role == 'Vice-Presidência' ? 3 :
+        role == 'Diretoria' ? 4 :
+        role == 'Presidência' ? 5 :
+        role == 'Administrador' ? 6 : 0;
+    }
+
+    function canManagePeople() {
+      return signedIn() && level(currentUser().role) >= 2;
+    }
+
+    function canViewFinance() {
+      return signedIn() && level(currentUser().role) >= 4;
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn();
+      allow update: if signedIn() &&
+        (request.auth.uid == uid || canManagePeople());
+    }
+
+    match /projects/{projectId} {
+      allow read: if signedIn();
+      allow write: if canManagePeople();
+    }
+
+    match /financial_entries/{entryId} {
+      allow read, write: if canViewFinance();
+    }
+  }
+}

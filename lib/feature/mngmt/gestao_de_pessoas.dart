@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../perfil/perfil_screen.dart';
+import '../core/data/firebase_repository.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -8,14 +12,7 @@ const _paper = Color(0xFFF5F7F8);
 const _teal = Color(0xFF087E8B);
 const _coral = Color(0xFFE76F51);
 
-const _roles = [
-  'Administrador',
-  'Presidência',
-  'Vice-Presidência',
-  'Diretoria',
-  'Gerência',
-  'Membro',
-];
+const _roles = Hierarchy.roles;
 
 class PersonRecord {
   const PersonRecord({
@@ -24,6 +21,7 @@ class PersonRecord {
     required this.role,
     required this.area,
     this.isActive = true,
+    this.uid = '',
   });
 
   final String name;
@@ -31,6 +29,29 @@ class PersonRecord {
   final String role;
   final String area;
   final bool isActive;
+  final String uid;
+
+  factory PersonRecord.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data() ?? {};
+    return PersonRecord(
+      uid: document.id,
+      name: data['name'] as String? ?? 'Usuário',
+      email: data['email'] as String? ?? '',
+      role: data['role'] as String? ?? 'Membro',
+      area: data['area'] as String? ?? 'Outros',
+      isActive: data['isActive'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+        'name': name,
+        'email': email,
+        'role': role,
+        'area': area,
+        'isActive': isActive,
+      };
 
   PersonRecord copyWith({String? role, bool? isActive}) => PersonRecord(
     name: name,
@@ -38,6 +59,7 @@ class PersonRecord {
     role: role ?? this.role,
     area: area,
     isActive: isActive ?? this.isActive,
+    uid: uid,
   );
 }
 
@@ -102,16 +124,35 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
       area: 'Pessoas',
     ),
   ];
+  StreamSubscription<List<PersonRecord>>? _peopleSubscription;
 
   String _selectedArea = 'Todas';
 
   // TEMPORARIO: remover Desenvolvedor quando o controle real de cargos estiver integrado.
-  bool get _canEdit => const {
-    'Gerência',
-    'Vice-Presidência',
-    'Diretoria',
-    'Desenvolvedor',
-  }.contains(widget.currentProfile.role);
+  bool get _canEdit => Hierarchy.canManagePeople(widget.currentProfile.role);
+
+  @override
+  void initState() {
+    super.initState();
+    _peopleSubscription = FirebaseRepository.instance.watchPeople().listen(
+      (loadedPeople) {
+        if (loadedPeople.isNotEmpty && mounted) {
+          setState(() {
+            _people
+              ..clear()
+              ..addAll(loadedPeople);
+          });
+        }
+      },
+      onError: (_) {},
+    );
+  }
+
+  @override
+  void dispose() {
+    _peopleSubscription?.cancel();
+    super.dispose();
+  }
 
   List<String> get _areas => [
     'Todas',
@@ -265,11 +306,7 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
               (index) => _RoleChip(
                 role: _roles[index],
                 level: index + 1,
-                canEdit: const {
-                  'Gerência',
-                  'Vice-Presidência',
-                  'Diretoria',
-                }.contains(_roles[index]),
+                canEdit: Hierarchy.canManagePeople(_roles[index]),
               ),
             ),
           ),
@@ -397,6 +434,9 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
     if (updated == null || !mounted) return;
     final index = _people.indexOf(person);
     setState(() => _people[index] = updated);
+    if (updated.uid.isNotEmpty) {
+      await FirebaseRepository.instance.savePerson(updated);
+    }
   }
 
   String _initials(String name) {

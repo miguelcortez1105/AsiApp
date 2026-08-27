@@ -8,7 +8,7 @@ const _muted = Color(0xFFB5C8D8);
 const _paper = Color(0xFF020A12);
 const _surface = Color(0xFF0B2D4D);
 const _line = Color(0xFF245274);
-const _teal = Color(0xFF007FFF);
+const _teal = Color(0xFF007FFF);  
 const _coral = Color(0xFFFF6B6B);
 const _green = Color(0xFF6FD8C0);
 

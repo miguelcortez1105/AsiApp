@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import 'gestao_de_pessoas.dart';
 import '../perfil/perfil_screen.dart';
+import '../core/data/firebase_repository.dart';
 
 const _ink = Color(0xFFF4FAFF);
 const _muted = Color(0xFFB5C8D8);
@@ -31,6 +35,31 @@ class _FinancialEntry {
   final double amount;
   final _EntryType type;
   final String? attachment;
+
+  factory _FinancialEntry.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data() ?? {};
+    return _FinancialEntry(
+      title: data['title'] as String? ?? 'Lançamento',
+      supplier: data['supplier'] as String? ?? 'Não informado',
+      category: data['category'] as String? ?? 'Outros',
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      amount: (data['amount'] as num?)?.toDouble() ?? 0,
+      type: data['type'] == 'entrada' ? _EntryType.entrada : _EntryType.saida,
+      attachment: data['attachment'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+        'title': title,
+        'supplier': supplier,
+        'category': category,
+        'date': Timestamp.fromDate(date),
+        'amount': amount,
+        'type': type == _EntryType.entrada ? 'entrada' : 'saida',
+        'attachment': attachment,
+      };
 }
 
 class GestaoFinanceira extends StatefulWidget {
@@ -48,6 +77,8 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   String _categoryFilter = 'Todas';
   String _supplierFilter = 'Todos';
   String _valueFilter = 'Todos';
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _entriesSubscription;
 
   final List<_FinancialEntry> _entries = [
     _FinancialEntry(
@@ -86,18 +117,37 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _entriesSubscription = FirebaseFirestore.instance
+        .collection('financial_entries')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted || snapshot.docs.isEmpty) return;
+      setState(() {
+        _entries
+          ..clear()
+          ..addAll(snapshot.docs.map(_FinancialEntry.fromFirestore));
+      });
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _entriesSubscription?.cancel();
+    super.dispose();
+  }
+
   // TEMPORARIO: remover o cargo Desenvolvedor quando o controle real de cargos estiver integrado.
-  bool get _isAllowed => const {
-    'Presidência',
-    'Diretoria',
-    'Desenvolvedor',
-  }.contains(widget.currentProfile.role);
+  bool get _isAllowed => Hierarchy.canViewFinance(widget.currentProfile.role);
   double get _totalEntries => _entries
       .where((entry) => entry.type == _EntryType.entrada)
-      .fold(0, (sum, entry) => sum + entry.amount);
+      .fold(0, (total, entry) => total + entry.amount);
   double get _totalExits => _entries
       .where((entry) => entry.type == _EntryType.saida)
-      .fold(0, (sum, entry) => sum + entry.amount);
+      .fold(0, (total, entry) => total + entry.amount);
   List<_FinancialEntry> get _filteredEntries => _entries.where((entry) {
     final type =
         _typeFilter == 'Todos' ||
@@ -571,7 +621,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       ...['Faturamento', 'Operacional', 'Impostos'].map((category) {
         final total = _entries
             .where((entry) => entry.category == category)
-            .fold(0.0, (sum, entry) => sum + entry.amount);
+            .fold(0.0, (total, entry) => total + entry.amount);
         return _reportLine(
           category,
           total,
@@ -879,7 +929,12 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     title.dispose();
     supplier.dispose();
     amount.dispose();
-    if (result != null && mounted) setState(() => _entries.insert(0, result));
+    if (result != null && mounted) {
+      setState(() => _entries.insert(0, result));
+      await FirebaseFirestore.instance
+          .collection('financial_entries')
+          .add(result.toFirestore());
+    }
   }
 
   String _monthLabel(DateTime date) =>

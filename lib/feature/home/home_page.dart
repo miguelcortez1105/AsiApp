@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../mngmt/gestao_de_pessoas.dart';
 import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
+import '../core/data/firebase_repository.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -30,6 +34,24 @@ class Project {
   final double progress;
   final String status;
   final Color color;
+
+  factory Project.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data() ?? {};
+    final colorValue = (data['color'] as String? ?? '087E8B')
+        .replaceFirst('#', '');
+    return Project(
+      name: data['name'] as String? ?? 'Projeto sem nome',
+      area: data['area'] as String? ?? 'Outros',
+      manager: data['manager'] as String? ?? 'Não informado',
+      members: data['members'] as String? ?? '0 pessoas',
+      value: data['value'] as String? ?? 'R\$ 0',
+      progress: (data['progress'] as num?)?.toDouble() ?? 0,
+      status: data['status'] as String? ?? 'Sem status',
+      color: Color(int.tryParse('FF$colorValue', radix: 16) ?? 0xFF087E8B),
+    );
+  }
 }
 
 const projects = [
@@ -93,14 +115,35 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
   late UserProfile _profile = widget.profile;
+  List<Project> _projects = projects;
+  StreamSubscription<List<Project>>? _projectsSubscription;
 
-  List<Project> get _profileProjects => projects;
+  List<Project> get _profileProjects => _projects;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectsSubscription = FirebaseRepository.instance.watchProjects().listen(
+      (loadedProjects) {
+        if (loadedProjects.isNotEmpty && mounted) {
+          setState(() => _projects = loadedProjects);
+        }
+      },
+      onError: (_) {},
+    );
+  }
+
+  @override
+  void dispose() {
+    _projectsSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final filteredProjects = _selectedArea == 'Todas'
-        ? projects
-        : projects.where((project) => project.area == _selectedArea).toList();
+      ? _projects
+      : _projects.where((project) => project.area == _selectedArea).toList();
     return Scaffold(
       backgroundColor: _paper,
       body: SafeArea(
@@ -220,11 +263,7 @@ class _HomePageState extends State<HomePage> {
               title: Text('Gestão de pessoas'),
             ),
           ),
-          if (const {
-            'Presidência',
-            'Diretoria',
-            'Desenvolvedor',
-          }.contains(_profile.role))
+          if (Hierarchy.canViewFinance(_profile.role))
             const PopupMenuItem(
               value: 'finance',
               child: ListTile(

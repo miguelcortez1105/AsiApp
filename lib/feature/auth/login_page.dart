@@ -5,14 +5,10 @@ import '../home/home_page.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/data/firebase_repository.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 const _corporateDomain = '@asimovjr.com.br';
-
-// TEMPORARIO: remover quando o controle real de cargos estiver integrado.
-const _temporaryDeveloperRole = 'Desenvolvedor';
-
-
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -82,6 +78,14 @@ class _LoginPageState extends State<LoginPage> {
       await credential.user?.updateDisplayName(
         _nameController.text.trim(),
       );
+      final createdUser = credential.user!;
+      await FirebaseRepository.instance.saveProfile(
+        UserProfile(
+          uid: createdUser.uid,
+          name: _nameController.text.trim(),
+          email: email,
+        ),
+      );
 
       if (!mounted) return;
 
@@ -105,7 +109,9 @@ class _LoginPageState extends State<LoginPage> {
 
     if (!mounted) return;
 
-    _openHome(credential.user!);
+    final user = credential.user!;
+    final savedProfile = await FirebaseRepository.instance.getProfile(user.uid);
+    _openHome(user, savedProfile: savedProfile);
   } on FirebaseAuthException catch (e) {
     if (!mounted) return;
 
@@ -171,16 +177,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _openHome(User user) {
+  void _openHome(User user, {UserProfile? savedProfile}) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => HomePage(
-          profile: UserProfile(
-            name: user.displayName ?? 'Usuário',
-            email: user.email ?? '',
-            // TEMPORÁRIO: cargo ainda não vem do backend.
-            role: _temporaryDeveloperRole,
-          ),
+          profile: savedProfile ??
+              UserProfile(
+                uid: user.uid,
+                name: user.displayName ?? 'Usuário',
+                email: user.email ?? '',
+                role: 'Membro',
+              ),
         ),
       ),
     );

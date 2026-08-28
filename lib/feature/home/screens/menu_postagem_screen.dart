@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:asiapp_mobile/feature/home/screens/aba_calendario.dart';
-import 'package:asiapp_mobile/feature/home/screens/aba_cadastro_postagem.dart';
+import 'aba_cadastro_postagem.dart';
+import 'aba_feed_social.dart';
+import 'postagem.dart';
 
 class MenuPostagemScreen extends StatefulWidget {
   const MenuPostagemScreen({super.key});
@@ -12,6 +14,9 @@ class MenuPostagemScreen extends StatefulWidget {
 class _MenuPostagemScreenState extends State<MenuPostagemScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  final List<Postagem> _postagensSimuladas = []; // TODO: substituir por dados reais do Firestore
+  final String nomeUsuarioLogado = 'Ana Alves'; // TODO: buscar do Firestore quando conectado
 
   @override
   void initState() {
@@ -43,8 +48,12 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
         controller: _tabController,
         children: [
           const AbaCalendario(),
-          const AbaCadastroPostagem(),
-          const Center(child: Text('Aba Feed Social')),
+          AbaCadastroPostagem(
+            postagens: _postagensSimuladas,
+            nomeUsuarioLogado: nomeUsuarioLogado,
+            aoPublicar: () => setState(() {}),
+          ),
+          AbaFeedSocial(postagens: _postagensSimuladas),
         ],
       ),
     );

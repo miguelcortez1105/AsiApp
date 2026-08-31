@@ -8,6 +8,7 @@ const _paper = Color(0xFFF5F7F8);
 const _teal = Color(0xFF087E8B);
 const _coral = Color(0xFFE76F51);
 
+
 const _roles = [
 	'Administrador',
 	'Presidência',
@@ -49,6 +50,8 @@ class GestaoDePessoas extends StatefulWidget {
 	@override
 	State<GestaoDePessoas> createState() => _GestaoDePessoasState();
 }
+
+//dados_mockados
 
 class _GestaoDePessoasState extends State<GestaoDePessoas> {
 	final List<PersonRecord> _people = [
@@ -102,6 +105,8 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
 			area: 'Pessoas',
 		),
 	];
+
+//cargos
 
 	String _selectedArea = 'Todas';
 
@@ -202,6 +207,8 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
 			),
 		);
 	}
+
+//estrutura e hierarquia
 
 	Widget _buildHeader() => Column(
 				crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,6 +6,7 @@ import '../perfil/perfil_screen.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/data/firebase_repository.dart';
+import 'role_triage_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 const _corporateDomain = '@asimovjr.com.br';
@@ -84,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
           uid: createdUser.uid,
           name: _nameController.text.trim(),
           email: email,
+          role: Hierarchy.awaitingRoleAssignment,
         ),
       );
 
@@ -207,18 +209,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _openHome(User user, {UserProfile? savedProfile}) {
+    final profile = savedProfile ??
+        UserProfile(
+          uid: user.uid,
+          name: user.displayName ?? 'Usuário',
+          email: user.email ?? '',
+          role: Hierarchy.awaitingRoleAssignment,
+        );
+
+    final destination = Hierarchy.isAwaitingRoleAssignment(profile.role)
+        ? RoleTriagePage(profile: profile)
+        : HomePage(profile: profile);
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => HomePage(
-          profile: savedProfile ??
-              UserProfile(
-                uid: user.uid,
-                name: user.displayName ?? 'Usuário',
-                email: user.email ?? '',
-                role: 'Membro',
-              ),
-        ),
-      ),
+      MaterialPageRoute<void>(builder: (_) => destination),
     );
   }
 

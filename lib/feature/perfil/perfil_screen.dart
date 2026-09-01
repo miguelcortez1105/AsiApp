@@ -20,10 +20,10 @@ class UserProfile {
   final String uid;
   final String? photoUrl;
 
-  UserProfile copyWith({String? name, String? photoUrl}) => UserProfile(
+  UserProfile copyWith({String? name, String? email, String? role, String? photoUrl}) => UserProfile(
         name: name ?? this.name,
-        email: email,
-        role: role,
+        email: email ?? this.email,
+        role: role ?? this.role,
         uid: uid,
         photoUrl: photoUrl ?? this.photoUrl,
       );

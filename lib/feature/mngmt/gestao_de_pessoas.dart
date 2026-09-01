@@ -128,8 +128,7 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
 
   String _selectedArea = 'Todas';
 
-  // TEMPORARIO: remover Desenvolvedor quando o controle real de cargos estiver integrado.
-  bool get _canEdit => Hierarchy.canManagePeople(widget.currentProfile.role);
+  bool get _canEdit => Hierarchy.canAssignRole(widget.currentProfile.role);
 
   @override
   void initState() {

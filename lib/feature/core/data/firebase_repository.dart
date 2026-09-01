@@ -55,6 +55,7 @@ class FirebaseRepository {
 class Hierarchy {
   Hierarchy._();
 
+  static const awaitingRoleAssignment = 'Aguardando atribuição';
   static const administrator = 'Administrador';
   static const presidency = 'Presidência';
   static const vicePresidency = 'Vice-Presidência';
@@ -73,6 +74,7 @@ class Hierarchy {
   ];
 
   static const _levels = {
+    awaitingRoleAssignment: 0,
     member: 1,
     management: 2,
     vicePresidency: 3,
@@ -82,9 +84,14 @@ class Hierarchy {
     developer: 6,
   };
 
+  static bool isAwaitingRoleAssignment(String role) =>
+      role.trim() == awaitingRoleAssignment;
+
   static bool canManagePeople(String role) => level(role) >= level(management);
   static bool canViewFinance(String role) => level(role) >= level(directory);
   static bool canManageAll(String role) => level(role) >= level(administrator);
-  static int level(String role) => _levels[role] ?? 0;
+  static bool canAssignRole(String role) =>
+      role.trim() == presidency || role.trim() == vicePresidency;
+  static int level(String role) => _levels[role.trim()] ?? 0;
 }
 

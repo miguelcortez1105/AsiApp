@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage> {
     _projectsSubscription = FirebaseRepository.instance.watchProjects(
       memberId: Hierarchy.canManageProjects(_profile.role)
           ? null
-          : _profile.uid,
+          : (_profile.uid.isEmpty ? '__missing_uid__' : _profile.uid),
     ).listen(
       (loadedProjects) {
         if (mounted) {
@@ -444,8 +444,8 @@ class _HomePageState extends State<HomePage> {
       ),
       _KpiData(
         'Projetos ativos',
-        '18',
-        '4 áreas de projetos',
+        '${_projects.length}',
+        '${_projects.map((project) => project.area).toSet().length} áreas de projetos',
         Icons.layers_outlined,
         const Color(0xFF4C6FFF),
         '3 em atenção',
@@ -607,10 +607,11 @@ class _HomePageState extends State<HomePage> {
         ),
         itemBuilder: (context) => [
           'Todas',
-          'Digital',
-          'Operações',
+          'Mobile',
+          'Desktop',
+          'Dados',
+          'Sites',
           'Pessoas',
-          'Tecnologia',
         ].map((area) => PopupMenuItem(value: area, child: Text(area))).toList(),
       ),
     ],

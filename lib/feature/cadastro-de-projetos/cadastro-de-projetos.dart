@@ -54,7 +54,13 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
   void initState() {
     super.initState();
     _projectsSubscription = FirebaseRepository.instance
-        .watchProjects(memberId: _canCreate ? null : widget.currentProfile.uid)
+      .watchProjects(
+        memberId: _canCreate
+          ? null
+          : (widget.currentProfile.uid.isEmpty
+            ? '__missing_uid__'
+            : widget.currentProfile.uid),
+      )
         .listen((projects) {
       if (mounted) setState(() => _projects = projects);
     });
@@ -206,6 +212,7 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
     var area = _areas.first;
     var managerId = '';
     var status = _statuses.first;
+    String? formError;
     final selectedMemberIds = <String>{widget.currentProfile.uid};
 
     await showModalBottomSheet<void>(
@@ -283,11 +290,20 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
                   decoration: const InputDecoration(labelText: 'Valor'),
                 ),
                 const SizedBox(height: 16),
+                if (formError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      formError!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () async {
                       if (nameController.text.trim().isEmpty || selectedMemberIds.isEmpty) {
+                        setSheetState(() => formError = 'Informe o nome e selecione ao menos uma pessoa.');
                         return;
                       }
                       PersonRecord? manager;
@@ -298,23 +314,34 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
                             valueController.text.replaceAll(',', '.'),
                           ) ??
                           0;
-                      await FirebaseRepository.instance.saveProject(data: {
-                        'name': nameController.text.trim(),
-                        'client': clientController.text.trim(),
-                        'area': area,
-                        'manager': manager?.name ?? widget.currentProfile.name,
-                        'managerId': managerId.isEmpty
-                            ? widget.currentProfile.uid
-                            : managerId,
-                        'memberIds': selectedMemberIds.toList(),
-                        'members': '${selectedMemberIds.length} pessoas',
-                        'value': 'R\$ ${value.toStringAsFixed(2)}',
-                        'progress': 0,
-                        'status': status,
-                        'color': '087E8B',
-                        'createdBy': widget.currentProfile.uid,
-                      });
-                      if (sheetContext.mounted) Navigator.pop(sheetContext);
+                      try {
+                        await FirebaseRepository.instance.saveProject(data: {
+                          'name': nameController.text.trim(),
+                          'client': clientController.text.trim(),
+                          'area': area,
+                          'manager': manager?.name ?? widget.currentProfile.name,
+                          'managerId': managerId.isEmpty
+                              ? widget.currentProfile.uid
+                              : managerId,
+                          'memberIds': selectedMemberIds.toList(),
+                          'members': '${selectedMemberIds.length} pessoas',
+                          'value': 'R\$ ${value.toStringAsFixed(2)}',
+                          'progress': 0,
+                          'status': status,
+                          'color': '087E8B',
+                          'createdBy': widget.currentProfile.uid,
+                        });
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(content: Text('Projeto cadastrado com sucesso.')),
+                          );
+                        }
+                      } catch (_) {
+                        if (sheetContext.mounted) {
+                          setSheetState(() => formError = 'Não foi possível cadastrar o projeto. Verifique sua permissão e tente novamente.');
+                        }
+                      }
                     },
                     child: const Text('Cadastrar projeto'),
                   ),

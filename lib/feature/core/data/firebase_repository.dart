@@ -19,10 +19,11 @@ class FirebaseRepository {
     if (memberId != null && memberId.isNotEmpty) {
       query = query.where('memberIds', arrayContains: memberId);
     }
-    return query
-        .orderBy('name')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(Project.fromFirestore).toList());
+    return query.snapshots().map((snapshot) {
+      final projects = snapshot.docs.map(Project.fromFirestore).toList();
+      projects.sort((first, second) => first.name.compareTo(second.name));
+      return projects;
+    });
   }
 
   Future<void> saveProject({String? id, required Map<String, dynamic> data}) {

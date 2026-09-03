@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
             child: ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.folder_outlined),
-              title: Text('Meus projetos'),
+              title: Text('Projetos'),
             ),
           ),
           PopupMenuItem(

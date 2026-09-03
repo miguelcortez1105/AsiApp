@@ -79,7 +79,7 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus projetos')),
+      appBar: AppBar(title: const Text('Projetos')),
       body: Column(
         children: [
           _buildFilters(),

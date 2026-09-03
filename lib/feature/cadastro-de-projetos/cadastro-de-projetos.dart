@@ -1,399 +1,332 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-class Projeto {
-  String id;
-  String nome;
-  String cliente;
-  String areaResponsavel;
-  String gerenteProjeto;
-  List<String> equipe;
-  DateTime prazo; 
-  double valor;
-  String status;
-
-  Projeto({
-    required this.id,
-    required this.nome,
-    required this.cliente,
-    required this.areaResponsavel,
-    required this.gerenteProjeto,
-    required this.equipe,
-    required this.prazo,
-    required this.valor,
-    this.status = 'A Iniciar',
-  });
-}
+import '../core/data/firebase_repository.dart';
+import '../home/home_page.dart';
+import '../mngmt/gestao_de_pessoas.dart';
+import '../perfil/perfil_screen.dart';
 
 class CadastroDeProjetos extends StatefulWidget {
+  const CadastroDeProjetos({super.key, required this.currentProfile});
+
+  final UserProfile currentProfile;
+
   @override
-  _CadastroDeProjetosState createState() => _CadastroDeProjetosState();
+  State<CadastroDeProjetos> createState() => _CadastroDeProjetosState();
 }
 
 class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
-  // Mock 
-  final List<String> _areas = ['Mobile', 'Desktop', 'Dados', 'Sites'];
-  final List<String> _statusList = ['A Iniciar', 'Em Andamento', 'Concluído'];
-  final List<String> _membrosCadastrados = ['Miguel', 'Ana', 'João', 'Maria', 'Carlos', 'Matheus', 'Sofia'];
-  
-  List<Projeto> _projetosDb = [
-    Projeto(
-      id: '1', 
-      nome: 'App Asimov', 
-      cliente: 'Interno', 
-      areaResponsavel: 'Mobile',
-      gerenteProjeto: 'Miguel', 
-      equipe: ['Ana', 'João'], 
-      prazo: DateTime(2026, 12, 12), 
-      valor: 15000, 
-      status: 'Em Andamento'
-    ),
-  ];
+  static const _areas = ['Mobile', 'Desktop', 'Dados', 'Sites', 'Pessoas'];
+  static const _statuses = ['A Iniciar', 'Em Andamento', 'Concluído'];
 
-  String? _filtroArea;
-  String? _filtroStatus; 
-  final _valorMinCtrl = TextEditingController();
-  final _valorMaxCtrl = TextEditingController();
+  final _minimumController = TextEditingController();
+  final _maximumController = TextEditingController();
+  List<Project> _projects = [];
+  List<PersonRecord> _people = [];
+  String? _areaFilter;
+  String? _statusFilter;
+  StreamSubscription<List<Project>>? _projectsSubscription;
+  StreamSubscription<List<PersonRecord>>? _peopleSubscription;
 
-  List<Projeto> get _projetosFiltrados {
-    return _projetosDb.where((p) {
-      final areaMatch = _filtroArea == null || p.areaResponsavel == _filtroArea;
-      final statusMatch = _filtroStatus == null || p.status == _filtroStatus;
-      
-      final vMin = double.tryParse(_valorMinCtrl.text) ?? 0.0;
-      final vMax = double.tryParse(_valorMaxCtrl.text) ?? double.infinity;
-      final valorMatch = p.valor >= vMin && p.valor <= vMax;
+  bool get _canCreate => Hierarchy.canManageProjects(widget.currentProfile.role);
 
-      return areaMatch && statusMatch && valorMatch;
-    }).toList();
+  List<Project> get _filteredProjects => _projects.where((project) {
+        final minimum = double.tryParse(
+              _minimumController.text.replaceAll(',', '.'),
+            ) ??
+            0;
+        final maximum = double.tryParse(
+              _maximumController.text.replaceAll(',', '.'),
+            ) ??
+            double.infinity;
+        final areaMatches = _areaFilter == null || project.area == _areaFilter;
+        final statusMatches =
+            _statusFilter == null || project.status == _statusFilter;
+        final value = _projectValue(project.value);
+        return areaMatches && statusMatches && value >= minimum && value <= maximum;
+      }).toList();
+
+  double _projectValue(String value) =>
+      double.tryParse(value.replaceAll(RegExp(r'[^0-9,.]'), '').replaceAll(',', '.')) ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectsSubscription = FirebaseRepository.instance
+        .watchProjects(memberId: _canCreate ? null : widget.currentProfile.uid)
+        .listen((projects) {
+      if (mounted) setState(() => _projects = projects);
+    });
+    if (_canCreate) {
+      _peopleSubscription = FirebaseRepository.instance.watchPeople().listen((people) {
+        if (mounted) {
+          setState(() => _people = people.where((person) => person.isActive).toList());
+        }
+      });
+    }
   }
 
-  void _abrirFormulario({Projeto? projetoExistente}) {
-    final bool isEdicao = projetoExistente != null;
-    
-    final _formKey = GlobalKey<FormState>();
-    final _nomeCtrl = TextEditingController(text: projetoExistente?.nome ?? '');
-    final _clienteCtrl = TextEditingController(text: projetoExistente?.cliente ?? '');
-    final _valorCtrl = TextEditingController(text: projetoExistente?.valor != null ? projetoExistente!.valor.toString() : '');
-    
-    DateTime? _dataSelecionada = projetoExistente?.prazo;
-    final _prazoCtrl = TextEditingController(
-      text: projetoExistente?.prazo != null 
-          ? '${projetoExistente!.prazo.day.toString().padLeft(2, '0')}/${projetoExistente!.prazo.month.toString().padLeft(2, '0')}/${projetoExistente!.prazo.year}'
-          : '',
-    );
-    
-    String? _areaSelecionada = projetoExistente?.areaResponsavel;
-    String? _gerenteSelecionado = projetoExistente?.gerenteProjeto;
-    String _statusSelecionado = projetoExistente?.status ?? 'A Iniciar';
-    List<String> _equipeSelecionada = projetoExistente?.equipe != null 
-        ? List.from(projetoExistente!.equipe) 
-        : [];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16, right: 16, top: 24,
-              ),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isEdicao ? 'Editar Projeto' : 'Novo Projeto', 
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _nomeCtrl, 
-                        decoration: const InputDecoration(labelText: 'Nome do Projeto'),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome do projeto' : null,
-                      ),
-                      TextFormField(
-                        controller: _clienteCtrl, 
-                        decoration: const InputDecoration(labelText: 'Cliente'),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Informe o cliente' : null,
-                        onChanged: (v) => setModalState(() {}), // Atualiza para revalidar a regra do valor se mudar para "Interno"
-                      ),
-                      
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Área Responsável'),
-                        value: _areaSelecionada,
-                        items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
-                        onChanged: (v) => setModalState(() => _areaSelecionada = v),
-                        validator: (v) => v == null ? 'Selecione a área responsável' : null,
-                      ),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Gerente de Projeto'),
-                        value: _gerenteSelecionado,
-                        items: _membrosCadastrados.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                        onChanged: (v) => setModalState(() => _gerenteSelecionado = v),
-                        validator: (v) => v == null ? 'Selecione o gerente do projeto' : null,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      const Text('Equipe:'),
-                      Wrap(
-                        spacing: 8.0,
-                        children: _membrosCadastrados.map((membro) {
-                          final isSelected = _equipeSelecionada.contains(membro);
-                          return FilterChip(
-                            label: Text(membro),
-                            selected: isSelected,
-                            onSelected: (bool selected) {
-                              setModalState(() {
-                                selected ? _equipeSelecionada.add(membro) : _equipeSelecionada.remove(membro);
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _prazoCtrl,
-                              readOnly: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Prazo',
-                                suffixIcon: Icon(Icons.calendar_today),
-                              ),
-                              onTap: () async {
-                                DateTime? picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: _dataSelecionada ?? DateTime.now(),
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2100),
-                                );
-                                if (picked != null) {
-                                  setModalState(() {
-                                    _dataSelecionada = picked;
-                                    _prazoCtrl.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-                                  });
-                                }
-                              },
-                              validator: (v) => _dataSelecionada == null ? 'Selecione o prazo' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _valorCtrl, 
-                              decoration: InputDecoration(
-                                labelText: _clienteCtrl.text.trim().toLowerCase() == 'interno' 
-                                    ? 'Valor (R\$) (Opcional)' 
-                                    : 'Valor (R\$)'
-                              ), 
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              validator: (v) {
-                                final isInterno = _clienteCtrl.text.trim().toLowerCase() == 'interno';
-                                
-                                if (!isInterno) {
-                                  // Projeto NÃO interno: Valor é OBRIGATÓRIO e deve ser > 0
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Informe o valor do projeto';
-                                  }
-                                  final valorParsed = double.tryParse(v.replaceAll(',', '.'));
-                                  if (valorParsed == null) {
-                                    return 'Digite um número válido';
-                                  }
-                                  if (valorParsed <= 0) {
-                                    return 'O valor deve ser maior que zero';
-                                  }
-                                } else {
-                                  // Projeto interno: Valor é OPCIONAL, mas se preenchido, deve ser válido
-                                  if (v != null && v.trim().isNotEmpty) {
-                                    final valorParsed = double.tryParse(v.replaceAll(',', '.'));
-                                    if (valorParsed == null || valorParsed < 0) {
-                                      return 'Valor inválido';
-                                    }
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 10),
-                      if (isEdicao)
-                        DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(labelText: 'Status do Projeto'),
-                          value: _statusSelecionado,
-                          items: _statusList.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                          onChanged: (v) => setModalState(() => _statusSelecionado = v!),
-                        ),
-
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              final double valorFinal = _valorCtrl.text.trim().isEmpty 
-                                  ? 0.0 
-                                  : (double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0);
-
-                              final novoProjeto = Projeto(
-                                id: isEdicao ? projetoExistente.id : DateTime.now().toString(),
-                                nome: _nomeCtrl.text,
-                                cliente: _clienteCtrl.text,
-                                areaResponsavel: _areaSelecionada ?? '',
-                                gerenteProjeto: _gerenteSelecionado ?? '',
-                                equipe: _equipeSelecionada,
-                                prazo: _dataSelecionada!,
-                                valor: valorFinal,
-                                status: _statusSelecionado,
-                              );
-
-                              setState(() {
-                                if (isEdicao) {
-                                  final index = _projetosDb.indexWhere((p) => p.id == projetoExistente.id);
-                                  _projetosDb[index] = novoProjeto;
-                                } else {
-                                  _projetosDb.add(novoProjeto);
-                                }
-                              });
-                              Navigator.pop(context);
-                            }
-                          },
-                          child: Text(isEdicao ? 'Salvar Alterações' : 'Cadastrar Projeto'),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _projectsSubscription?.cancel();
+    _peopleSubscription?.cancel();
+    _minimumController.dispose();
+    _maximumController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestão de Projetos')),
+      appBar: AppBar(title: const Text('Meus projetos')),
       body: Column(
         children: [
-          ExpansionTile(
-            title: const Text('Filtros de Busca'),
-            leading: const Icon(Icons.filter_alt),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(labelText: 'Área', isDense: true),
-                            value: _filtroArea,
-                            items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
-                            onChanged: (v) => setState(() => _filtroArea = v),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(labelText: 'Status', isDense: true),
-                            value: _filtroStatus,
-                            items: _statusList.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            onChanged: (v) => setState(() => _filtroStatus = v),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _valorMinCtrl,
-                            decoration: const InputDecoration(labelText: 'Valor Mínimo (R\$)'),
-                            keyboardType: TextInputType.number,
-                            onChanged: (v) => setState(() {}),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _valorMaxCtrl,
-                            decoration: const InputDecoration(labelText: 'Valor Máximo (R\$)'),
-                            keyboardType: TextInputType.number,
-                            onChanged: (v) => setState(() {}),
-                          ),
-                        ),
-                      ],
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _filtroArea = null;
-                        _filtroStatus = null;
-                        _valorMinCtrl.clear();
-                        _valorMaxCtrl.clear();
-                      }),
-                      child: const Text('Limpar Filtros'),
-                    )
-                  ],
-                ),
-              )
-            ],
-          ),
-          
+          _buildFilters(),
           Expanded(
-            child: ListView.builder(
-              itemCount: _projetosFiltrados.length,
-              itemBuilder: (context, index) {
-                final projeto = _projetosFiltrados[index];
-                final prazoFormatado = '${projeto.prazo.day.toString().padLeft(2, '0')}/${projeto.prazo.month.toString().padLeft(2, '0')}/${projeto.prazo.year}';
-                
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    title: Text(projeto.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Cliente: ${projeto.cliente} | Área: ${projeto.areaResponsavel}'),
-                        Text('Valor: R\$ ${projeto.valor.toStringAsFixed(2)} | Prazo: $prazoFormatado'),
-                        const SizedBox(height: 4),
-                        Chip(label: Text(projeto.status), backgroundColor: Colors.blue.withOpacity(0.1)),
-                      ],
+            child: _filteredProjects.isEmpty
+                ? Center(
+                    child: Text(
+                      _canCreate
+                          ? 'Nenhum projeto cadastrado.'
+                          : 'Você ainda não participa de nenhum projeto.',
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _abrirFormulario(projetoExistente: projeto),
-                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _filteredProjects.length,
+                    itemBuilder: (context, index) =>
+                        _buildProjectCard(_filteredProjects[index]),
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _abrirFormulario(),
-        child: const Icon(Icons.add),
-        tooltip: 'Cadastrar Projeto',
+      floatingActionButton: _canCreate
+          ? FloatingActionButton.extended(
+              onPressed: _openProjectForm,
+              icon: const Icon(Icons.add),
+              label: const Text('Novo projeto'),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildFilters() => ExpansionTile(
+        title: const Text('Filtros de busca'),
+        leading: const Icon(Icons.filter_alt_outlined),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(labelText: 'Área'),
+                        initialValue: _areaFilter,
+                        items: _areas
+                            .map((area) => DropdownMenuItem(
+                                  value: area,
+                                  child: Text(area),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setState(() => _areaFilter = value),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(labelText: 'Status'),
+                        initialValue: _statusFilter,
+                        items: _statuses
+                            .map((status) => DropdownMenuItem(
+                                  value: status,
+                                  child: Text(status),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setState(() => _statusFilter = value),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _minimumController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(labelText: 'Valor mínimo'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _maximumController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(labelText: 'Valor máximo'),
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _areaFilter = null;
+                    _statusFilter = null;
+                    _minimumController.clear();
+                    _maximumController.clear();
+                  }),
+                  child: const Text('Limpar filtros'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildProjectCard(Project project) => Card(
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: project.color.withAlpha(24),
+            child: Icon(Icons.folder_outlined, color: project.color),
+          ),
+          title: Text(
+            project.name,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text('${project.area} • ${project.status} • ${project.members}'),
+          trailing: Text(project.value),
+        ),
+      );
+
+  Future<void> _openProjectForm() async {
+    final nameController = TextEditingController();
+    final clientController = TextEditingController();
+    final valueController = TextEditingController();
+    var area = _areas.first;
+    var managerId = '';
+    var status = _statuses.first;
+    final selectedMemberIds = <String>{widget.currentProfile.uid};
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            20,
+            16,
+            MediaQuery.viewInsetsOf(context).bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Novo projeto', style: Theme.of(context).textTheme.titleLarge),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Nome do projeto'),
+                ),
+                TextField(
+                  controller: clientController,
+                  decoration: const InputDecoration(labelText: 'Cliente'),
+                ),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Área responsável'),
+                  initialValue: area,
+                  items: _areas
+                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                      .toList(),
+                  onChanged: (value) => setSheetState(() => area = value!),
+                ),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Gerente'),
+                  initialValue: managerId.isEmpty ? null : managerId,
+                  items: _people
+                      .map((person) => DropdownMenuItem(
+                            value: person.uid,
+                            child: Text(person.name),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setSheetState(() => managerId = value ?? ''),
+                ),
+                const SizedBox(height: 12),
+                const Text('Equipe'),
+                Wrap(
+                  spacing: 8,
+                  children: _people
+                      .map((person) => FilterChip(
+                            label: Text(person.name),
+                            selected: selectedMemberIds.contains(person.uid),
+                            onSelected: (selected) => setSheetState(() {
+                              if (selected) {
+                                selectedMemberIds.add(person.uid);
+                              } else {
+                                selectedMemberIds.remove(person.uid);
+                              }
+                            }),
+                          ))
+                      .toList(),
+                ),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Status'),
+                  initialValue: status,
+                  items: _statuses
+                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                      .toList(),
+                  onChanged: (value) => setSheetState(() => status = value!),
+                ),
+                TextField(
+                  controller: valueController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Valor'),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () async {
+                      if (nameController.text.trim().isEmpty || selectedMemberIds.isEmpty) {
+                        return;
+                      }
+                      PersonRecord? manager;
+                      for (final person in _people) {
+                        if (person.uid == managerId) manager = person;
+                      }
+                      final value = double.tryParse(
+                            valueController.text.replaceAll(',', '.'),
+                          ) ??
+                          0;
+                      await FirebaseRepository.instance.saveProject(data: {
+                        'name': nameController.text.trim(),
+                        'client': clientController.text.trim(),
+                        'area': area,
+                        'manager': manager?.name ?? widget.currentProfile.name,
+                        'managerId': managerId.isEmpty
+                            ? widget.currentProfile.uid
+                            : managerId,
+                        'memberIds': selectedMemberIds.toList(),
+                        'members': '${selectedMemberIds.length} pessoas',
+                        'value': 'R\$ ${value.toStringAsFixed(2)}',
+                        'progress': 0,
+                        'status': status,
+                        'color': '087E8B',
+                        'createdBy': widget.currentProfile.uid,
+                      });
+                      if (sheetContext.mounted) Navigator.pop(sheetContext);
+                    },
+                    child: const Text('Cadastrar projeto'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
+    nameController.dispose();
+    clientController.dispose();
+    valueController.dispose();
   }
 }

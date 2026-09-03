@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../cadastro-de-projetos/cadastro-de-projetos.dart';
 import '../mngmt/gestao_de_pessoas.dart';
 import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
@@ -17,6 +18,7 @@ const _coral = Color(0xFFE76F51);
 
 class Project {
   const Project({
+    this.id = '',
     required this.name,
     required this.area,
     required this.manager,
@@ -25,7 +27,9 @@ class Project {
     required this.progress,
     required this.status,
     required this.color,
+    this.memberIds = const [],
   });
+  final String id;
   final String name;
   final String area;
   final String manager;
@@ -34,6 +38,7 @@ class Project {
   final double progress;
   final String status;
   final Color color;
+  final List<String> memberIds;
 
   factory Project.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> document,
@@ -41,21 +46,31 @@ class Project {
     final data = document.data() ?? {};
     final colorValue = (data['color'] as String? ?? '087E8B')
         .replaceFirst('#', '');
+    final rawMemberIds = data['memberIds'];
+    final memberIds = rawMemberIds is List
+      ? rawMemberIds.whereType<String>().toList()
+      : <String>[];
+    final rawMembers = data['members'];
     return Project(
+      id: document.id,
       name: data['name'] as String? ?? 'Projeto sem nome',
       area: data['area'] as String? ?? 'Outros',
       manager: data['manager'] as String? ?? 'Não informado',
-      members: data['members'] as String? ?? '0 pessoas',
+        members: rawMembers is String
+          ? rawMembers
+          : '${memberIds.length} pessoas',
       value: data['value'] as String? ?? 'R\$ 0',
       progress: (data['progress'] as num?)?.toDouble() ?? 0,
       status: data['status'] as String? ?? 'Sem status',
       color: Color(int.tryParse('FF$colorValue', radix: 16) ?? 0xFF087E8B),
+      memberIds: memberIds,
     );
   }
 }
 
 const projects = [
   Project(
+    id: 'demo-portal',
     name: 'Portal de Clientes',
     area: 'Digital',
     manager: 'Miguel',
@@ -66,6 +81,7 @@ const projects = [
     color: _teal,
   ),
   Project(
+    id: 'demo-expansao',
     name: 'Expansão Asimov',
     area: 'Operações',
     manager: 'Matheus',
@@ -76,6 +92,7 @@ const projects = [
     color: _coral,
   ),
   Project(
+    id: 'demo-academia',
     name: 'Academia de Itajubá',
     area: 'Pessoas',
     manager: 'Matheus',
@@ -86,6 +103,7 @@ const projects = [
     color: Color(0xFF4C6FFF),
   ),
   Project(
+    id: 'demo-dados',
     name: 'Modernização de Dados',
     area: 'Tecnologia',
     manager: 'Leo',
@@ -115,17 +133,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
   late UserProfile _profile = widget.profile;
-  List<Project> _projects = projects;
+  late List<Project> _projects =
+      Hierarchy.canManageProjects(widget.profile.role) ? projects : [];
   StreamSubscription<List<Project>>? _projectsSubscription;
-
-  List<Project> get _profileProjects => _projects;
 
   @override
   void initState() {
     super.initState();
-    _projectsSubscription = FirebaseRepository.instance.watchProjects().listen(
+    _projectsSubscription = FirebaseRepository.instance.watchProjects(
+      memberId: Hierarchy.canManageProjects(_profile.role)
+          ? null
+          : _profile.uid,
+    ).listen(
       (loadedProjects) {
-        if (loadedProjects.isNotEmpty && mounted) {
+        if (mounted) {
           setState(() => _projects = loadedProjects);
         }
       },
@@ -225,7 +246,7 @@ class _HomePageState extends State<HomePage> {
           } else if (value == 'finance') {
             _openFinancialManagement();
           } else {
-            _showProjectsDialog();
+            _openProjects();
           }
         },
         tooltip: 'Abrir perfil',
@@ -365,37 +386,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showProjectsDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Projetos de ${_profile.name}'),
-        content: SizedBox(
-          width: 360,
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: _profileProjects.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final project = _profileProjects[index];
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: project.color.withAlpha(24),
-                  child: Icon(Icons.folder_outlined, color: project.color),
-                ),
-                title: Text(project.name),
-                subtitle: Text('${project.area} • ${project.status}'),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
-          ),
-        ],
+  void _openProjects() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CadastroDeProjetos(currentProfile: _profile),
       ),
     );
   }

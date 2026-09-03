@@ -146,7 +146,7 @@ class RoleTriagePage extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({super.key, required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;

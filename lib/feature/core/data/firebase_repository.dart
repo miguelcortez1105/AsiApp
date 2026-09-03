@@ -14,11 +14,27 @@ class FirebaseRepository {
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  Stream<List<Project>> watchProjects() => _firestore
-      .collection('projects')
-      .orderBy('name')
-      .snapshots()
-      .map((snapshot) => snapshot.docs.map(Project.fromFirestore).toList());
+  Stream<List<Project>> watchProjects({String? memberId}) {
+    Query<Map<String, dynamic>> query = _firestore.collection('projects');
+    if (memberId != null && memberId.isNotEmpty) {
+      query = query.where('memberIds', arrayContains: memberId);
+    }
+    return query
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map(Project.fromFirestore).toList());
+  }
+
+  Future<void> saveProject({String? id, required Map<String, dynamic> data}) {
+    final reference = id == null
+        ? _firestore.collection('projects').doc()
+        : _firestore.collection('projects').doc(id);
+    return reference.set({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (id == null) 'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   Stream<List<PersonRecord>> watchPeople() => _firestore
       .collection('users')
@@ -62,6 +78,7 @@ class Hierarchy {
   static const directory = 'Diretoria';
   static const management = 'Gerência';
   static const member = 'Membro';
+  static const humanResources = 'RH';
   static const developer = 'Desenvolvedor';
 
   static const roles = [
@@ -71,11 +88,13 @@ class Hierarchy {
     directory,
     management,
     member,
+    humanResources,
   ];
 
   static const _levels = {
     awaitingRoleAssignment: 0,
     member: 1,
+    humanResources: 1,
     management: 2,
     vicePresidency: 3,
     directory: 4,
@@ -88,6 +107,8 @@ class Hierarchy {
       role.trim() == awaitingRoleAssignment;
 
   static bool canManagePeople(String role) => level(role) >= level(management);
+  static bool canViewProjects(String role) => level(role) >= level(member);
+  static bool canManageProjects(String role) => level(role) >= level(management);
   static bool canViewFinance(String role) => level(role) >= level(directory);
   static bool canManageAll(String role) => level(role) >= level(administrator);
   static bool canAssignRole(String role) =>

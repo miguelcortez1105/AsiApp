@@ -1,0 +1,131 @@
+CONFIGURACAO DAS REGRAS DO FIREBASE
+Projeto: asiapp-994a7
+
+1. REGRAS DO FIRESTORE
+
+No console do Firebase, acesse:
+Firestore Database > Regras
+
+Substitua o conteúdo atual por:
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function level(role) {
+      return role == 'Membro' ? 1 :
+        role == 'Gerência' ? 2 :
+        role == 'Vice-Presidência' ? 3 :
+        role == 'Diretoria' ? 4 :
+        role == 'Presidência' ? 5 :
+        role == 'Administrador' ? 6 : 0;
+    }
+
+    function canManagePeople() {
+      return signedIn() && level(currentUser().role) >= 2;
+    }
+
+    function canViewFinance() {
+      return signedIn() && level(currentUser().role) >= 4;
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn();
+      allow update: if signedIn() &&
+        (request.auth.uid == uid || canManagePeople());
+    }
+
+    match /projects/{projectId} {
+      allow read: if signedIn();
+      allow write: if canManagePeople();
+    }
+
+    match /financial_entries/{entryId} {
+      allow read, write: if canViewFinance();
+    }
+  }
+}
+
+Depois clique em Publicar.
+
+
+2. REGRAS DO STORAGE
+
+No console do Firebase, acesse:
+Storage > Rules
+
+Substitua o conteúdo atual por:
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profile_images/{uid}.{extension} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && extension in ['jpg', 'jpeg', 'png', 'webp']
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+
+Depois clique em Publicar.
+
+
+3. ESTRUTURA ESPERADA NO FIRESTORE
+
+Coleções usadas pelo aplicativo:
+
+users/{uid}
+  name: string
+  email: string
+  role: 'Membro' | 'Gerência' | 'Vice-Presidência' | 'Diretoria' | 'Presidência' | 'Administrador'
+  area: string
+  isActive: boolean
+  photoUrl: string opcional
+
+projects/{projectId}
+  name: string
+  area: string
+  manager: string
+  members: string
+  value: string
+  progress: number entre 0 e 1
+  status: string
+  color: string hexadecimal, por exemplo '#087E8B'
+
+financial_entries/{entryId}
+  title: string
+  supplier: string
+  category: string
+  date: timestamp
+  amount: number
+  type: 'entrada' ou 'saida'
+  attachment: string opcional
+
+
+4. HIERARQUIA DE ACESSO
+
+Membro e RH: consultam somente projetos dos quais participam.
+Gerência ou superior: consulta todos os projetos e pode cadastrar, editar e remover projetos.
+Vice-Presidência: pode alterar cargos/status e gerenciar projetos.
+Diretoria: pode consultar e alterar dados financeiros.
+Presidência: pode consultar e alterar dados financeiros.
+Administrador: possui o maior nível de acesso.
+
+IMPORTANTE
+
+As regras dependem de autenticação pelo Firebase Authentication.
+O documento users/{uid} precisa existir e conter o campo role.
+Nunca publique regras abertas como allow read, write: if true.

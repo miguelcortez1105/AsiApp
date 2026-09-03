@@ -4,8 +4,8 @@ class Evento {
   final List<String> areas;
 
   Evento({
-    required this.titulo, 
-    required this.horario, 
+    required this.titulo,
+    required this.horario,
     required this.areas
   });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:asiapp_mobile/feature/home/screens/evento.dart';
+import 'evento.dart';
 
 class AbaCalendario extends StatefulWidget {
   const AbaCalendario({super.key});

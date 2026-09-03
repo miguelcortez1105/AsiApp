@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:asiapp_mobile/feature/home/screens/aba_calendario.dart';
+import 'aba_calendario.dart';
 import 'aba_cadastro_postagem.dart';
 import 'aba_feed_social.dart';
 import 'postagem.dart';

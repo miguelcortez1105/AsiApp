@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:asiapp_mobile/feature/home/screens/postagem.dart';
+import 'postagem.dart';
 
 class AbaCadastroPostagem extends StatefulWidget {
   final List<Postagem> postagens;

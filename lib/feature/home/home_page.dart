@@ -8,6 +8,7 @@ import '../mngmt/gestao_de_pessoas.dart';
 import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
+import '../../menu_postagem_screen.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -245,6 +246,8 @@ class _HomePageState extends State<HomePage> {
             _openPeopleManagement();
           } else if (value == 'finance') {
             _openFinancialManagement();
+          } else if (value == 'posting') {
+            _openPostingMenu();
           } else {
             _openProjects();
           }
@@ -274,6 +277,14 @@ class _HomePageState extends State<HomePage> {
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.folder_outlined),
               title: Text('Projetos'),
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'posting',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.campaign_outlined),
+              title: Text('Menu de postagem'),
             ),
           ),
           PopupMenuItem(
@@ -391,6 +402,12 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute<void>(
         builder: (_) => CadastroDeProjetos(currentProfile: _profile),
       ),
+    );
+  }
+
+  void _openPostingMenu() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const MenuPostagemScreen()),
     );
   }
 

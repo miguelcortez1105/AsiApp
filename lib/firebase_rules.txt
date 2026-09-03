@@ -117,8 +117,8 @@ financial_entries/{entryId}
 
 4. HIERARQUIA DE ACESSO
 
-Membro: consulta usuários, projetos e seu próprio perfil.
-Gerência: pode alterar cargos/status e gerenciar projetos.
+Membro e RH: consultam somente projetos dos quais participam.
+Gerência ou superior: consulta todos os projetos e pode cadastrar, editar e remover projetos.
 Vice-Presidência: pode alterar cargos/status e gerenciar projetos.
 Diretoria: pode consultar e alterar dados financeiros.
 Presidência: pode consultar e alterar dados financeiros.

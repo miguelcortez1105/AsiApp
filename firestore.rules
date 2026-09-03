@@ -12,6 +12,7 @@ service cloud.firestore {
 
     function level(role) {
       return role == 'Membro' ? 1 :
+        role == 'RH' ? 1 :
         role == 'Gerência' ? 2 :
         role == 'Vice-Presidência' ? 3 :
         role == 'Diretoria' ? 4 :
@@ -27,6 +28,14 @@ service cloud.firestore {
       return signedIn() && level(currentUser().role) >= 4;
     }
 
+    function canManageProjects() {
+      return signedIn() && level(currentUser().role) >= 2;
+    }
+
+    function isProjectMember() {
+      return signedIn() && request.auth.uid in resource.data.memberIds;
+    }
+
     match /users/{uid} {
       allow create: if signedIn() && request.auth.uid == uid;
       allow read: if signedIn();
@@ -35,8 +44,9 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow read: if signedIn();
-      allow write: if canManagePeople();
+      allow read: if canManageProjects() || isProjectMember();
+      allow create: if canManageProjects();
+      allow update, delete: if canManageProjects();
     }
 
     match /financial_entries/{entryId} {

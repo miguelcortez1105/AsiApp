@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../home/home_page.dart';
-import '../../mngmt/gestao_de_pessoas.dart';
+import '../../pessoas/gestao_de_pessoas.dart';
 import '../../perfil/perfil_screen.dart';
 
 class FirebaseRepository {

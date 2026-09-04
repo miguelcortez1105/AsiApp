@@ -63,12 +63,16 @@ dev_dependencies:
 flutter:
 
   assets:
-    - assets/images/logo.png
     - assets/images/bg_login_celular.png
     - assets/images/bg_login_tablet.png
-    - assets/images/asimembro-branco.png
     - assets/images/asimembro-branco.svg
     - assets/images/google.png
+    - assets/images/bg_app.png
+    - assets/images/icon_home.svg
+    - assets/images/nav_home.svg
+    - assets/images/nav_financeiro.svg
+    - assets/images/nav_home_selected.svg
+    - assets/images/nav_financeiro_selected.svg
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

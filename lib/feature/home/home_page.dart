@@ -1,18 +1,18 @@
 import 'dart:async';
 
+import 'package:asiapp_mobile/feature/core/theme/app_colors.dart';
+import 'package:asiapp_mobile/feature/core/widgets/app_header.dart';
+import '../core/widgets/app_bottom_nav.dart';
+import '../core/widgets/app_background.dart';
+import '../core/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import '../cadastro-de-projetos/cadastro-de-projetos.dart';
-import '../mngmt/gestao_de_pessoas.dart';
-import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
-import '../../menu_postagem_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
-const _paper = Color(0xFFF5F7F8);
 const _line = Color(0xFFE3E8EB);
 const _teal = Color(0xFF087E8B);
 const _coral = Color(0xFFE76F51);
@@ -160,22 +160,27 @@ class _HomePageState extends State<HomePage> {
     _projectsSubscription?.cancel();
     super.dispose();
   }
+@override
+Widget build(BuildContext context) {
+  final filteredProjects = _selectedArea == 'Todas'
+    ? _projects
+    : _projects.where((project) => project.area == _selectedArea).toList();
 
-  @override
-  Widget build(BuildContext context) {
-    final filteredProjects = _selectedArea == 'Todas'
-      ? _projects
-      : _projects.where((project) => project.area == _selectedArea).toList();
-    return Scaffold(
-      backgroundColor: _paper,
-      body: SafeArea(
+  return Scaffold(
+    backgroundColor: Colors.transparent,
+    extendBody: true,
+    body: AppBackground(
+      child: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 900;
             return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isWide ? 48 : 20,
-                vertical: isWide ? 34 : 22,
+              padding: EdgeInsets.only(
+                left: isWide ? 48 : 20,
+                right: isWide ? 48 : 20,
+                top: isWide ? 34 : 22,
+                bottom: isWide ? 34 : 100,
               ),
               child: Center(
                 child: ConstrainedBox(
@@ -184,15 +189,12 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHeader(context),
-                      const SizedBox(height: 34),
-                      _buildWelcome(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       _buildKpis(isWide),
-                      const SizedBox(height: 24),
                       _buildGoalSection(isWide),
-                      const SizedBox(height: 34),
+                      const SizedBox(height: 16),
                       _buildProjectHeader(),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       _buildProjects(filteredProjects, isWide),
                     ],
                   ),
@@ -202,175 +204,52 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ),
-    );
-  }
+    ),
+    bottomNavigationBar: AppBottomNav(
+      currentTab: AppTab.inicio,
+      profile: _profile,
+    ),
+  );
+}
 
   Widget _buildHeader(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+      Expanded(
+        child: ScreenHeader(
+          tela: 'H O M E',
+          title: 'Bem vindo, ${_profile.name.split(' ').first}!',
+          subtitle: 'Acompanhe os processos da empresa hoje',
         ),
       ),
-      const SizedBox(width: 12),
-      const Text(
-        'AsiApp',
-        style: TextStyle(
-          color: Color.fromARGB(255, 0, 128, 255),
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
-        ),
-      ),
-      const Spacer(),
-      IconButton(
-        onPressed: () {},
-        tooltip: 'Notificações',
-        icon: const Icon(Icons.notifications_none_rounded, color: _ink),
-      ),
-      const SizedBox(width: 4),
-      PopupMenuButton<String>(
-        onSelected: (value) {
-          if (value == 'profile') {
-            _openProfile();
-          } else if (value == 'edit') {
-            _showEditProfileDialog();
-          } else if (value == 'people') {
-            _openPeopleManagement();
-          } else if (value == 'finance') {
-            _openFinancialManagement();
-          } else if (value == 'posting') {
-            _openPostingMenu();
-          } else {
-            _openProjects();
-          }
-        },
-        tooltip: 'Abrir perfil',
-        offset: const Offset(0, 48),
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: 'profile',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.account_circle_outlined),
-              title: Text('Meu perfil'),
-            ),
-          ),
-          PopupMenuItem(
-            value: 'edit',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.edit_outlined),
-              title: Text('Editar perfil'),
-            ),
-          ),
-          PopupMenuItem(
-            value: 'projects',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.folder_outlined),
-              title: Text('Projetos'),
-            ),
-          ),
-          const PopupMenuItem(
-            value: 'posting',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.campaign_outlined),
-              title: Text('Menu de postagem'),
-            ),
-          ),
-          PopupMenuItem(
-            value: 'people',
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.groups_outlined),
-              title: Text('Gestão de pessoas'),
-            ),
-          ),
-          if (Hierarchy.canViewFinance(_profile.role))
-            const PopupMenuItem(
-              value: 'finance',
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.account_balance_outlined),
-                title: Text('Gestão financeira'),
-              ),
-            ),
-        ],
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Color(0xFFFFC857),
-              child: Text(
-                _initials(_profile.name),
-                style: const TextStyle(
-                  color: _ink,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            if (MediaQuery.sizeOf(context).width > 520)
-              Text(
-                _profile.name,
-                style: const TextStyle(
-                  color: _ink,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
-      ),
+      _buildProfileButton(context),
     ],
   );
 
-  Future<void> _showEditProfileDialog() async {
-    final updatedName = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        var editedName = _profile.name;
-        return AlertDialog(
-          title: const Text('Editar perfil'),
-          content: TextFormField(
-            initialValue: _profile.name,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            onChanged: (value) => editedName = value,
-            decoration: const InputDecoration(
-              labelText: 'Nome',
-              hintText: 'Digite seu nome',
+  Widget _buildProfileButton(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: _openProfile,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32, 
+              child: SvgPicture.asset('assets/images/icon_home.svg'),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final name = editedName.trim();
-                if (name.isNotEmpty) Navigator.pop(context, name);
-              },
-              child: const Text('Salvar'),
+            const SizedBox(width: 8),
+            Text(
+              'AsiPerfil',
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
             ),
           ],
-        );
-      },
-    );
-    if (updatedName != null && mounted) {
-      setState(() => _profile = _profile.copyWith(name: updatedName));
-    }
-  }
+        ),
+      ),
+    ),
+  );
 
   Future<void> _openProfile() async {
     final updatedProfile = await Navigator.of(context).push<UserProfile>(
@@ -380,66 +259,6 @@ class _HomePageState extends State<HomePage> {
       setState(() => _profile = updatedProfile);
     }
   }
-
-  void _openPeopleManagement() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => GestaoDePessoas(currentProfile: _profile),
-      ),
-    );
-  }
-
-  void _openFinancialManagement() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => GestaoFinanceira(currentProfile: _profile),
-      ),
-    );
-  }
-
-  void _openProjects() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CadastroDeProjetos(currentProfile: _profile),
-      ),
-    );
-  }
-
-  void _openPostingMenu() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const MenuPostagemScreen()),
-    );
-  }
-
-  Widget _buildWelcome() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'PAINEL EXECUTIVO',
-        style: TextStyle(
-          color: _teal,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.6,
-        ),
-      ),
-      SizedBox(height: 8),
-      Text(
-        'Bom dia, ${_profile.name.split(' ').first}.',
-        style: const TextStyle(
-          color: _ink,
-          fontSize: 32,
-          fontWeight: FontWeight.w800,
-          height: 1.1,
-        ),
-      ),
-      SizedBox(height: 8),
-      Text(
-        'Acompanhe o que move a empresa hoje.',
-        style: TextStyle(color: _muted, fontSize: 15),
-      ),
-    ],
-  );
 
   Widget _buildKpis(bool isWide) {
     final cards = [
@@ -487,7 +306,6 @@ class _HomePageState extends State<HomePage> {
         ? Row(
             children: [
               _buildGoalCopy(),
-              const SizedBox(width: 48),
               Expanded(child: _buildProgressBars()),
             ],
           )
@@ -495,54 +313,20 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildGoalCopy(),
-              const SizedBox(height: 24),
+              
               _buildProgressBars(),
             ],
           ),
   );
 
-  Widget _buildGoalCopy() => const SizedBox(
+  Widget _buildGoalCopy() => SizedBox(
     width: 245,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'RITMO DA META',
-          style: TextStyle(
-            color: _muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.3,
-          ),
-        ),
-        SizedBox(height: 12),
-        Text(
-          'Quase lá.',
-          style: TextStyle(
-            color: _ink,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        SizedBox(height: 6),
-        Text(
-          'O acumulado está acima do ritmo esperado para o período.',
-          style: TextStyle(color: _muted, fontSize: 13, height: 1.45),
-        ),
-        SizedBox(height: 14),
-        Row(
-          children: [
-            Icon(Icons.schedule_rounded, size: 16, color: _teal),
-            SizedBox(width: 6),
-            Text(
-              'Restam 4 meses',
-              style: TextStyle(
-                color: _teal,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-            ),
-          ],
+          'Portal BJ',
+          style: AppTextStyles.caption.copyWith(color: AppColors.black),
         ),
       ],
     ),
@@ -551,46 +335,63 @@ class _HomePageState extends State<HomePage> {
   Widget _buildProgressBars() => Column(
     children: [
       _ProgressLine(
-        label: 'Faturamento',
+        label: 'CSAT',
         value: .925,
         amount: '92,5%',
-        color: _teal,
+        color: const Color(0xFF88D46C),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 8),
       _ProgressLine(
-        label: 'Projetos entregues',
+        label: 'Tempo de Permanencia no MEJ',
         value: .68,
         amount: '68%',
-        color: _coral,
+        color: const Color(0xFF88D46C),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 8),
       _ProgressLine(
-        label: 'Margem operacional',
+        label: 'Engajamento com o  MEJ',
         value: .81,
         amount: '81%',
-        color: const Color(0xFF4C6FFF),
+        color: const Color(0xFF88D46C),
+      ),
+      const SizedBox(height: 8),
+      _ProgressLine(
+        label: 'Politicas de Diversidade e Inclusão',
+        value: .925,
+        amount: '92,5%',
+        color: const Color(0xFF007FFF),
+      ),
+      const SizedBox(height: 8),
+      _ProgressLine(
+        label: 'Faturamento Colaborativo',
+        value: .68,
+        amount: '68%',
+        color: const Color(0xFF007FFF),
+      ),
+      const SizedBox(height: 8),
+      _ProgressLine(
+        label: 'Projetos de Impacto',
+        value: .81,
+        amount: '81%',
+        color: const Color(0xFF007FFF)
       ),
     ],
   );
 
   Widget _buildProjectHeader() => Row(
     children: [
-      const Expanded(
+      Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Projetos atuais',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
+              style: AppTextStyles.h2.copyWith(color: AppColors.white),
             ),
             SizedBox(height: 4),
             Text(
               'Visão rápida por área, andamento e responsáveis.',
-              style: TextStyle(color: _muted, fontSize: 13),
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
             ),
           ],
         ),
@@ -636,9 +437,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildProjects(List<Project> projects, bool isWide) {
     if (projects.isEmpty) {
-      return const Text(
+      return Text(
         'Nenhum projeto encontrado.',
-        style: TextStyle(color: _muted),
+        style: AppTextStyles.caption.copyWith(color: AppColors.white),
       );
     }
     return GridView.builder(
@@ -653,12 +454,6 @@ class _HomePageState extends State<HomePage> {
       ),
       itemBuilder: (context, index) => _ProjectCard(project: projects[index]),
     );
-  }
-
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 }
 

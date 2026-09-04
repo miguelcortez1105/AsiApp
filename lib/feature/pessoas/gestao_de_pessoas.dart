@@ -5,10 +5,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
+import 'package:asiapp_mobile/feature/core/theme/app_colors.dart';
+import 'package:asiapp_mobile/feature/core/widgets/app_header.dart';
+import '../core/widgets/app_bottom_nav.dart';
+import '../core/widgets/app_background.dart';
+import '../core/theme/app_text_styles.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
-const _paper = Color(0xFFF5F7F8);
 const _teal = Color(0xFF087E8B);
 const _coral = Color(0xFFE76F51);
 
@@ -163,117 +167,119 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
       : _people.where((person) => person.area == _selectedArea).toList();
 
   @override
-  Widget build(BuildContext context) {
-    final groupedPeople = <String, List<PersonRecord>>{};
-    for (final person in _filteredPeople) {
-      groupedPeople.putIfAbsent(person.area, () => []).add(person);
-    }
+Widget build(BuildContext context) {
+  final groupedPeople = <String, List<PersonRecord>>{};
+  for (final person in _filteredPeople) {
+    groupedPeople.putIfAbsent(person.area, () => []).add(person);
+  }
 
-    return Scaffold(
-      backgroundColor: _paper,
-      appBar: AppBar(
-        title: const Text('Gestão de pessoas'),
-        backgroundColor: _paper,
-        foregroundColor: _ink,
-      ),
-      body: SafeArea(
+  return Scaffold(
+    backgroundColor: Colors.transparent,
+    extendBody: true,
+    body: AppBackground(
+      child: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: constraints.maxWidth >= 900 ? 48 : 20,
-              vertical: 24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1160),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 22),
-                    _buildHierarchyCard(),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Pessoas por área',
-                            style: TextStyle(
-                              color: _ink,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 900;
+            return SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: isWide ? 48 : 20,
+                right: isWide ? 48 : 20,
+                top: isWide ? 34 : 22,
+                bottom: isWide ? 34 : 100,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 22),
+                      _buildHierarchyCard(),
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Pessoas por área',
+                              style: AppTextStyles.body.copyWith(color: AppColors.white),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 180,
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _selectedArea,
-                            decoration: const InputDecoration(
-                              labelText: 'Área',
-                              isDense: true,
+                          SizedBox(
+                            width: 180,
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedArea,
+                              isExpanded: true,
+                              dropdownColor: const Color(0xFF0F142C),
+                              style: AppTextStyles.body.copyWith(color: AppColors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Área',
+                                labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+                                isDense: true,
+                              ),
+                              items: _areas
+                                  .map(
+                                    (area) => DropdownMenuItem(
+                                      value: area,
+                                      child: Text(
+                                        area,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (area) {
+                                if (area != null) {
+                                  setState(() => _selectedArea = area);
+                                }
+                              },
                             ),
-                            items: _areas
-                                .map(
-                                  (area) => DropdownMenuItem(
-                                    value: area,
-                                    child: Text(area),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (area) {
-                              if (area != null) {
-                                setState(() => _selectedArea = area);
-                              }
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (groupedPeople.isEmpty)
-                      const Text('Nenhuma pessoa encontrada nesta área.')
-                    else
-                      ...groupedPeople.entries.map(
-                        (entry) => _buildAreaSection(entry.key, entry.value),
+                        ],
                       ),
-                  ],
+                      const SizedBox(height: 14),
+                      if (groupedPeople.isEmpty)
+                        Text(
+                          'Nenhuma pessoa encontrada nesta área.',
+                          style: AppTextStyles.body.copyWith(color: AppColors.white),
+                        )
+                      else
+                        ...groupedPeople.entries.map(
+                          (entry) => _buildAreaSection(entry.key, entry.value),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
-    );
-  }
+    ),
+    bottomNavigationBar: AppBottomNav(
+      currentTab: AppTab.pessoas,
+      profile: widget.currentProfile,
+    ),
+  );
+}
 
   Widget _buildHeader() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        'ESTRUTURA ORGANIZACIONAL',
-        style: TextStyle(
-          color: _teal,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.4,
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Pessoas e hierarquia',
-        style: TextStyle(
-          color: _ink,
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-        ),
+      const ScreenHeader(
+        tela: 'G E S T Ã O',
+        title: 'Gestão de Pessoas',
+        subtitle: 'Acompanhe e gerencie todos os membros da empresa!',
       ),
       const SizedBox(height: 8),
       Text(
         _canEdit
             ? 'Você pode atualizar cargo e status dos membros.'
             : 'Todos podem consultar cargos, áreas e status. A edição é restrita às lideranças autorizadas.',
-        style: const TextStyle(color: _muted, fontSize: 15),
+        style: AppTextStyles.caption.copyWith(color: AppColors.white),
       ),
     ],
   );

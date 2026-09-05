@@ -1,7 +1,7 @@
 class Evento {
-  final String titulo;
-  final String horario;
-  final List<String> areas;
+  String titulo;
+  String horario;
+  List<String> areas;
 
   Evento({
     required this.titulo,

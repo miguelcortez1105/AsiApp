@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'evento.dart';
+import 'package:asiapp_mobile/evento.dart';
 
 class AbaCalendario extends StatefulWidget {
   const AbaCalendario({super.key});
@@ -18,7 +18,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   bool get _podeEditarEventos =>
       cargoUsuarioLogado == 'Diretor' || cargoUsuarioLogado == 'Gerente';
 
-    //substituir por dados reais do Firestore quando conectado
+  //substituir por dados reais do Firestore quando conectado
   final Map<DateTime, List<Evento>> _eventosSimulados = {
     DateTime.utc(2026, 8, 24): [
       Evento(titulo: 'Reunião Geral', horario: '18:00', areas: ['Geral']),
@@ -33,11 +33,11 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     'Ciência de Dados': Colors.teal,
     'Comissão Eventos': Colors.brown,
     'Comissão Processo Seletivo': Colors.indigo,
-    'Desktop':Colors.green,
+    'Desktop': Colors.green,
     'Gerentes': Colors.amber,
     'Marketing': Colors.pink,
     'Mobile': Colors.deepPurple,
-    'Presidência':Colors.red,
+    'Presidência': Colors.red,
     'RH': Colors.cyan,
     'Vendas': Colors.orange,
   };
@@ -53,10 +53,10 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     return _eventosSimulados[diaSemHora] ?? [];
   }
 
-  void _abrirFormularioEvento() {
-    final tituloController = TextEditingController();
-    final horarioController = TextEditingController();
-    List<String> areasSelecionadas = [];
+  void _abrirFormularioEvento({Evento? eventoParaEditar}) {
+    final tituloController = TextEditingController(text: eventoParaEditar?.titulo ?? '');
+    final horarioController = TextEditingController(text: eventoParaEditar?.horario ?? '');
+    List<String> areasSelecionadas = List.from(eventoParaEditar?.areas ?? []);
 
     showDialog(
       context: context,
@@ -64,7 +64,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Novo evento'),
+              title: Text(eventoParaEditar == null ? 'Novo evento' : 'Editar evento'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -118,19 +118,25 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                     );
 
                     setState(() {
-                      _eventosSimulados.putIfAbsent(diaSemHora, () => []);
-                      _eventosSimulados[diaSemHora]!.add(
-                        Evento(
-                          titulo: tituloController.text.trim(),
-                          horario: horarioController.text.trim(),
-                          areas: areasSelecionadas,
-                        ),
-                      );
+                      if (eventoParaEditar != null) {
+                        eventoParaEditar.titulo = tituloController.text.trim();
+                        eventoParaEditar.horario = horarioController.text.trim();
+                        eventoParaEditar.areas = areasSelecionadas;
+                      } else {
+                        _eventosSimulados.putIfAbsent(diaSemHora, () => []);
+                        _eventosSimulados[diaSemHora]!.add(
+                          Evento(
+                            titulo: tituloController.text.trim(),
+                            horario: horarioController.text.trim(),
+                            areas: areasSelecionadas,
+                          ),
+                        );
+                      }
                     });
 
                     Navigator.pop(context);
                   },
-                  child: const Text('Criar'),
+                  child: Text(eventoParaEditar == null ? 'Criar' : 'Salvar'),
                 ),
               ],
             );
@@ -139,35 +145,67 @@ class _AbaCalendarioState extends State<AbaCalendario> {
       },
     );
   }
-Widget _buildLegenda() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    child: Wrap(
-      spacing: 12,
-      runSpacing: 6,
-      children: _coresPorArea.entries.map((entrada) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: entrada.value,
-                shape: BoxShape.circle,
+
+  void _excluirEvento(Evento evento) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir evento'),
+        content: Text('Deseja excluir "${evento.titulo}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final diaEscolhido = _diaSelecionado ?? _diaFocado;
+              final diaSemHora = DateTime.utc(
+                diaEscolhido.year,
+                diaEscolhido.month,
+                diaEscolhido.day,
+              );
+              setState(() {
+                _eventosSimulados[diaSemHora]?.remove(evento);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegenda() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 6,
+        children: _coresPorArea.entries.map((entrada) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: entrada.value,
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              entrada.key,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        );
-      }).toList(),
-    ),
-  );
-}
+              const SizedBox(width: 4),
+              Text(
+                entrada.key,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +256,6 @@ Widget _buildLegenda() {
               },
             ),
           ),
-
           _buildLegenda(),
           const SizedBox(height: 16),
           Expanded(
@@ -232,6 +269,22 @@ Widget _buildLegenda() {
                         leading: const Icon(Icons.event),
                         title: Text(evento.titulo),
                         subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
+                        trailing: _podeEditarEventos
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    onPressed: () =>
+                                        _abrirFormularioEvento(eventoParaEditar: evento),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                    onPressed: () => _excluirEvento(evento),
+                                  ),
+                                ],
+                              )
+                            : null,
                       );
                     },
                   ),
@@ -239,11 +292,11 @@ Widget _buildLegenda() {
         ],
       ),
       floatingActionButton: _podeEditarEventos
-        ? FloatingActionButton(
-            onPressed: _abrirFormularioEvento,
-            child: const Icon(Icons.add),
-          )
-        : null,
+          ? FloatingActionButton(
+              onPressed: () => _abrirFormularioEvento(),
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

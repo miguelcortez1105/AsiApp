@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'postagem.dart';
 
+
 class AbaCadastroPostagem extends StatefulWidget {
   final List<Postagem> postagens;
   final String nomeUsuarioLogado;
@@ -86,6 +87,63 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     );
   }
 
+  void _editarPostagem(Postagem postagem) {
+    final controller = TextEditingController(text: postagem.texto);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar postagem'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isEmpty) return;
+              setState(() {
+                postagem.texto = controller.text.trim();
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _excluirPostagem(Postagem postagem) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir postagem'),
+        content: const Text('Deseja excluir esta postagem?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                widget.postagens.remove(postagem);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _textoController.dispose();
@@ -165,6 +223,19 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    onPressed: () => _editarPostagem(postagem),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                    onPressed: () => _excluirPostagem(postagem),
+                                  ),
+                                ],
+                              ),
                               Text(postagem.texto),
                               if (postagem.imagemBytes != null) ...[
                                 const SizedBox(height: 8),

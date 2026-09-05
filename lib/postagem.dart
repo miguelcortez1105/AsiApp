@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 class Postagem {
-  final String texto;
+  String texto;
   final String nomeAutor;
   final String? fotoAutorUrl;
   final Uint8List? imagemBytes;

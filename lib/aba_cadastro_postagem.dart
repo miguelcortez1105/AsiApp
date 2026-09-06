@@ -86,39 +86,7 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
       const SnackBar(content: Text('Postagem criada!')),
     );
   }
-
-  void _editarPostagem(Postagem postagem) {
-    final controller = TextEditingController(text: postagem.texto);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar postagem'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.trim().isEmpty) return;
-              setState(() {
-                postagem.texto = controller.text.trim();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-  }
-
+  
   void _excluirPostagem(Postagem postagem) {
     showDialog(
       context: context,
@@ -226,10 +194,6 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, size: 20),
-                                    onPressed: () => _editarPostagem(postagem),
-                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.delete, size: 20, color: Colors.red),
                                     onPressed: () => _excluirPostagem(postagem),

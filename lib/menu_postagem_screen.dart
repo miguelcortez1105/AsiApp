@@ -48,12 +48,8 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
         controller: _tabController,
         children: [
           const AbaCalendario(),
-          AbaCadastroPostagem(
-            postagens: _postagensSimuladas,
-            nomeUsuarioLogado: nomeUsuarioLogado,
-            aoPublicar: () => setState(() {}),
-          ),
-          AbaFeedSocial(postagens: _postagensSimuladas),
+          AbaCadastroPostagem(),
+          AbaFeedSocial(),
         ],
       ),
     );

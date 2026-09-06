@@ -21,10 +21,10 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   //substituir por dados reais do Firestore quando conectado
   final Map<DateTime, List<Evento>> _eventosSimulados = {
     DateTime.utc(2026, 8, 24): [
-      Evento(titulo: 'Reunião Geral', horario: '18:00', areas: ['Geral']),
+      Evento(titulo: 'Reunião Geral', horario: '18:00', areas: ['Geral'], data: DateTime.utc(2026, 8, 24)),
     ],
     DateTime.utc(2026, 8, 31): [
-      Evento(titulo: 'Apresentação Projeto final', horario: '18:00', areas: ['Mobile', 'Desktop', 'Marketing']),
+      Evento(titulo: 'Apresentação Projeto final', horario: '18:00', areas: ['Mobile', 'Desktop', 'Marketing'], data: DateTime.utc(2026, 8, 31)),
     ],
   };
 
@@ -129,6 +129,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                             titulo: tituloController.text.trim(),
                             horario: horarioController.text.trim(),
                             areas: areasSelecionadas,
+                            data: diaSemHora,
                           ),
                         );
                       }

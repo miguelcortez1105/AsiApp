@@ -2,19 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'postagem.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AbaCadastroPostagem extends StatefulWidget {
-  final List<Postagem> postagens;
-  final String nomeUsuarioLogado;
-  final VoidCallback aoPublicar;
-
-  const AbaCadastroPostagem({
-    super.key,
-    required this.postagens,
-    required this.nomeUsuarioLogado,
-    required this.aoPublicar,
-  });
+  const AbaCadastroPostagem({super.key});
 
   @override
   State<AbaCadastroPostagem> createState() => _AbaCadastroPostagemState();
@@ -23,10 +16,10 @@ class AbaCadastroPostagem extends StatefulWidget {
 class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
   final TextEditingController _textoController = TextEditingController();
   Uint8List? _imagemSelecionada;
+  bool _publicando = false;
 
-  List<Postagem> get _minhasPostagens => widget.postagens
-      .where((postagem) => postagem.nomeAutor == widget.nomeUsuarioLogado)
-      .toList();
+  String get _nomeUsuarioLogado =>
+      FirebaseAuth.instance.currentUser?.email ?? 'Usuário desconhecido';
 
   Future<void> _selecionarImagem() async {
     final origem = await showModalBottomSheet<ImageSource>(
@@ -64,29 +57,56 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     });
   }
 
-  void _publicarPostagem() {
+  Future<void> _publicarPostagem() async {
     if (_textoController.text.trim().isEmpty) return;
 
     setState(() {
-      widget.postagens.insert(
-        0,
-        Postagem(
-          texto: _textoController.text.trim(),
-          nomeAutor: widget.nomeUsuarioLogado,
-          imagemBytes: _imagemSelecionada,
-        ),
-      );
-      _textoController.clear();
-      _imagemSelecionada = null;
+      _publicando = true;
     });
 
-    widget.aoPublicar();
+    try {
+      String? imagemUrl;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Postagem criada!')),
-    );
+      if (_imagemSelecionada != null) {
+        final nomeArquivo = 'postagens/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final ref = FirebaseStorage.instance.ref().child(nomeArquivo);
+        await ref.putData(_imagemSelecionada!);
+        imagemUrl = await ref.getDownloadURL();
+      }
+
+      final novaPostagem = Postagem(
+        texto: _textoController.text.trim(),
+        nomeAutor: _nomeUsuarioLogado,
+        imagemUrl: imagemUrl,
+      );
+
+      await FirebaseFirestore.instance
+          .collection('postagens')
+          .add(novaPostagem.toMap());
+
+      _textoController.clear();
+      setState(() {
+        _imagemSelecionada = null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Postagem criada!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao publicar: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _publicando = false;
+      });
+    }
   }
-  
+
   void _excluirPostagem(Postagem postagem) {
     showDialog(
       context: context,
@@ -99,11 +119,12 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                widget.postagens.remove(postagem);
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('postagens')
+                  .doc(postagem.id)
+                  .delete();
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Excluir'),
           ),
@@ -162,12 +183,18 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
             children: [
               IconButton(
                 icon: const Icon(Icons.image_outlined),
-                onPressed: _selecionarImagem,
+                onPressed: _publicando ? null : _selecionarImagem,
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: _publicarPostagem,
-                child: const Text('Publicar'),
+                onPressed: _publicando ? null : _publicarPostagem,
+                child: _publicando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Publicar'),
               ),
             ],
           ),
@@ -178,49 +205,77 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: _minhasPostagens.isEmpty
-                ? const Center(child: Text('Você ainda não postou nada'))
-                : ListView.builder(
-                    itemCount: _minhasPostagens.length,
-                    itemBuilder: (context, index) {
-                      final postagem = _minhasPostagens[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                                    onPressed: () => _excluirPostagem(postagem),
-                                  ),
-                                ],
-                              ),
-                              Text(postagem.texto),
-                              if (postagem.imagemBytes != null) ...[
-                                const SizedBox(height: 8),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.memory(
-                                    postagem.imagemBytes!,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('postagens')
+                  .where('nomeAutor', isEqualTo: _nomeUsuarioLogado)
+                  .orderBy('dataCriacao', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Erro: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final documentos = snapshot.data?.docs ?? [];
+
+                if (documentos.isEmpty) {
+                  return const Center(child: Text('Você ainda não postou nada'));
+                }
+
+                return ListView.builder(
+                  itemCount: documentos.length,
+                  itemBuilder: (context, index) {
+                    final doc = documentos[index];
+                    final postagem = Postagem.fromMap(
+                      doc.id,
+                      doc.data() as Map<String, dynamic>,
+                    );
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                  onPressed: () => _excluirPostagem(postagem),
                                 ),
                               ],
+                            ),
+                            Text(postagem.texto),
+                            if (postagem.imagemUrl != null) ...[
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  postagem.imagemUrl!,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+
+

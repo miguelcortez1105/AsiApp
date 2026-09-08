@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Evento {
-  String? id; // ID do documento no Firestore
+  String? id;
   String titulo;
   String horario;
   List<String> areas;

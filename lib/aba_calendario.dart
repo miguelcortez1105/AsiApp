@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:asiapp_mobile/evento.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AbaCalendario extends StatefulWidget {
   const AbaCalendario({super.key});
@@ -13,20 +15,29 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   DateTime _diaFocado = DateTime.now();
   DateTime? _diaSelecionado;
 
-  String cargoUsuarioLogado = 'Diretor'; //buscar do Firestore quando conectado
+  String? _roleUsuarioLogado;
 
-  bool get _podeEditarEventos =>
-      cargoUsuarioLogado == 'Diretor' || cargoUsuarioLogado == 'Gerente';
+  int _level(String? role) {
+    switch (role) {
+      case 'Membro':
+      case 'RH':
+        return 1;
+      case 'Gerência':
+        return 2;
+      case 'Vice-Presidência':
+        return 3;
+      case 'Diretoria':
+        return 4;
+      case 'Presidência':
+        return 5;
+      case 'Administrador':
+        return 6;
+      default:
+        return 0;
+    }
+  }
 
-  //substituir por dados reais do Firestore quando conectado
-  final Map<DateTime, List<Evento>> _eventosSimulados = {
-    DateTime.utc(2026, 8, 24): [
-      Evento(titulo: 'Reunião Geral', horario: '18:00', areas: ['Geral'], data: DateTime.utc(2026, 8, 24)),
-    ],
-    DateTime.utc(2026, 8, 31): [
-      Evento(titulo: 'Apresentação Projeto final', horario: '18:00', areas: ['Mobile', 'Desktop', 'Marketing'], data: DateTime.utc(2026, 8, 31)),
-    ],
-  };
+  bool get _podeEditarEventos => _level(_roleUsuarioLogado) >= 2;
 
   final Map<String, Color> _coresPorArea = {
     'Geral': Colors.black,
@@ -46,11 +57,31 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   void initState() {
     super.initState();
     _diaSelecionado = _diaFocado;
+    _carregarCargoUsuario();
   }
 
-  List<Evento> _eventosDoDia(DateTime dia) {
+  Future<void> _carregarCargoUsuario() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    setState(() {
+      _roleUsuarioLogado = doc.data()?['role'];
+    });
+  }
+
+  Map<DateTime, List<Evento>> _agruparPorDia(List<Evento> eventos) {
+    final Map<DateTime, List<Evento>> mapa = {};
+    for (final evento in eventos) {
+      final diaSemHora = DateTime.utc(evento.data.year, evento.data.month, evento.data.day);
+      mapa.putIfAbsent(diaSemHora, () => []).add(evento);
+    }
+    return mapa;
+  }
+
+  List<Evento> _eventosDoDia(Map<DateTime, List<Evento>> mapa, DateTime dia) {
     final diaSemHora = DateTime.utc(dia.year, dia.month, dia.day);
-    return _eventosSimulados[diaSemHora] ?? [];
+    return mapa[diaSemHora] ?? [];
   }
 
   void _abrirFormularioEvento({Evento? eventoParaEditar}) {
@@ -106,7 +137,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                   child: const Text('Cancelar'),
                 ),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (tituloController.text.trim().isEmpty) return;
                     if (areasSelecionadas.isEmpty) return;
 
@@ -117,25 +148,28 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                       diaEscolhido.day,
                     );
 
-                    setState(() {
-                      if (eventoParaEditar != null) {
-                        eventoParaEditar.titulo = tituloController.text.trim();
-                        eventoParaEditar.horario = horarioController.text.trim();
-                        eventoParaEditar.areas = areasSelecionadas;
-                      } else {
-                        _eventosSimulados.putIfAbsent(diaSemHora, () => []);
-                        _eventosSimulados[diaSemHora]!.add(
-                          Evento(
-                            titulo: tituloController.text.trim(),
-                            horario: horarioController.text.trim(),
-                            areas: areasSelecionadas,
-                            data: diaSemHora,
-                          ),
-                        );
-                      }
-                    });
+                    if (eventoParaEditar != null) {
+                      await FirebaseFirestore.instance
+                          .collection('eventos')
+                          .doc(eventoParaEditar.id)
+                          .update({
+                        'titulo': tituloController.text.trim(),
+                        'horario': horarioController.text.trim(),
+                        'areas': areasSelecionadas,
+                      });
+                    } else {
+                      final novoEvento = Evento(
+                        titulo: tituloController.text.trim(),
+                        horario: horarioController.text.trim(),
+                        areas: areasSelecionadas,
+                        data: diaSemHora,
+                      );
+                      await FirebaseFirestore.instance
+                          .collection('eventos')
+                          .add(novoEvento.toMap());
+                    }
 
-                    Navigator.pop(context);
+                    if (context.mounted) Navigator.pop(context);
                   },
                   child: Text(eventoParaEditar == null ? 'Criar' : 'Salvar'),
                 ),
@@ -159,17 +193,12 @@ class _AbaCalendarioState extends State<AbaCalendario> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
-              final diaEscolhido = _diaSelecionado ?? _diaFocado;
-              final diaSemHora = DateTime.utc(
-                diaEscolhido.year,
-                diaEscolhido.month,
-                diaEscolhido.day,
-              );
-              setState(() {
-                _eventosSimulados[diaSemHora]?.remove(evento);
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('eventos')
+                  .doc(evento.id)
+                  .delete();
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Excluir'),
           ),
@@ -210,94 +239,113 @@ class _AbaCalendarioState extends State<AbaCalendario> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          TableCalendar(
-            firstDay: DateTime.utc(2025, 1, 1),
-            lastDay: DateTime.utc(2050, 12, 31),
-            focusedDay: _diaFocado,
-            selectedDayPredicate: (dia) => isSameDay(_diaSelecionado, dia),
-            onDaySelected: (diaSelecionado, diaFocado) {
-              setState(() {
-                _diaSelecionado = diaSelecionado;
-                _diaFocado = diaFocado;
-              });
-            },
-            locale: 'pt_BR',
-            eventLoader: _eventosDoDia,
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, dia, eventos) {
-                if (eventos.isEmpty) return null;
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('eventos').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Erro: ${snapshot.error}'));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-                final coresDoDia = <Color>{};
-                for (final evento in eventos) {
-                  for (final area in (evento as Evento).areas) {
-                    coresDoDia.add(_coresPorArea[area] ?? Colors.grey);
-                  }
-                }
+        final documentos = snapshot.data?.docs ?? [];
+        final eventos = documentos
+            .map((doc) => Evento.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+            .toList();
+        final eventosPorDia = _agruparPorDia(eventos);
+        final eventosDoDiaAtual = _eventosDoDia(eventosPorDia, _diaSelecionado ?? _diaFocado);
 
-                return Positioned(
-                  bottom: 4,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: coresDoDia.map((cor) {
-                      return Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: cor,
-                          shape: BoxShape.circle,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                );
-              },
-            ),
+        return Scaffold(
+          body: Column(
+            children: [
+              TableCalendar(
+                firstDay: DateTime.utc(2025, 1, 1),
+                lastDay: DateTime.utc(2050, 12, 31),
+                focusedDay: _diaFocado,
+                selectedDayPredicate: (dia) => isSameDay(_diaSelecionado, dia),
+                onDaySelected: (diaSelecionado, diaFocado) {
+                  setState(() {
+                    _diaSelecionado = diaSelecionado;
+                    _diaFocado = diaFocado;
+                  });
+                },
+                locale: 'pt_BR',
+                eventLoader: (dia) => _eventosDoDia(eventosPorDia, dia),
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, dia, eventosDoDia) {
+                    if (eventosDoDia.isEmpty) return null;
+
+                    final coresDoDia = <Color>{};
+                    for (final evento in eventosDoDia) {
+                      for (final area in (evento as Evento).areas) {
+                        coresDoDia.add(_coresPorArea[area] ?? Colors.grey);
+                      }
+                    }
+
+                    return Positioned(
+                      bottom: 4,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: coresDoDia.map((cor) {
+                          return Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 1),
+                            decoration: BoxDecoration(
+                              color: cor,
+                              shape: BoxShape.circle,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              _buildLegenda(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: eventosDoDiaAtual.isEmpty
+                    ? const Center(child: Text('Nenhum evento neste dia'))
+                    : ListView.builder(
+                        itemCount: eventosDoDiaAtual.length,
+                        itemBuilder: (context, index) {
+                          final evento = eventosDoDiaAtual[index];
+                          return ListTile(
+                            leading: const Icon(Icons.event),
+                            title: Text(evento.titulo),
+                            subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
+                            trailing: _podeEditarEventos
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        onPressed: () =>
+                                            _abrirFormularioEvento(eventoParaEditar: evento),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                        onPressed: () => _excluirEvento(evento),
+                                      ),
+                                    ],
+                                  )
+                                : null,
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-          _buildLegenda(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _eventosDoDia(_diaSelecionado ?? _diaFocado).isEmpty
-                ? const Center(child: Text('Nenhum evento neste dia'))
-                : ListView.builder(
-                    itemCount: _eventosDoDia(_diaSelecionado ?? _diaFocado).length,
-                    itemBuilder: (context, index) {
-                      final evento = _eventosDoDia(_diaSelecionado ?? _diaFocado)[index];
-                      return ListTile(
-                        leading: const Icon(Icons.event),
-                        title: Text(evento.titulo),
-                        subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
-                        trailing: _podeEditarEventos
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, size: 20),
-                                    onPressed: () =>
-                                        _abrirFormularioEvento(eventoParaEditar: evento),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                                    onPressed: () => _excluirEvento(evento),
-                                  ),
-                                ],
-                              )
-                            : null,
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-      floatingActionButton: _podeEditarEventos
-          ? FloatingActionButton(
-              onPressed: () => _abrirFormularioEvento(),
-              child: const Icon(Icons.add),
-            )
-          : null,
+          floatingActionButton: _podeEditarEventos
+              ? FloatingActionButton(
+                  onPressed: () => _abrirFormularioEvento(),
+                  child: const Icon(Icons.add),
+                )
+              : null,
+        );
+      },
     );
   }
 }

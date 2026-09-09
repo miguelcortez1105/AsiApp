@@ -4,35 +4,42 @@ class Postagem {
   String? id;
   String texto;
   final String nomeAutor;
+  final String autorUid;
   final String? fotoAutorUrl;
   String? imagemUrl;
-  int curtidas;
-  bool curtidoPorMim;
-  int repostagens;
-  bool repostadoPorMim;
+  List<String> curtidoPor;
+  List<String> repostadoPor;
   DateTime dataCriacao;
 
   Postagem({
     this.id,
     required this.texto,
     required this.nomeAutor,
+    required this.autorUid,
     this.fotoAutorUrl,
     this.imagemUrl,
-    this.curtidas = 0,
-    this.curtidoPorMim = false,
-    this.repostagens = 0,
-    this.repostadoPorMim = false,
+    List<String>? curtidoPor,
+    List<String>? repostadoPor,
     DateTime? dataCriacao,
-  }) : dataCriacao = dataCriacao ?? DateTime.now();
+  })  : curtidoPor = curtidoPor ?? [],
+        repostadoPor = repostadoPor ?? [],
+        dataCriacao = dataCriacao ?? DateTime.now();
+
+  int get curtidas => curtidoPor.length;
+  int get repostagens => repostadoPor.length;
+
+  bool curtidoPorMim(String? meuUid) => curtidoPor.contains(meuUid);
+  bool repostadoPorMim(String? meuUid) => repostadoPor.contains(meuUid);
 
   Map<String, dynamic> toMap() {
     return {
       'texto': texto,
       'nomeAutor': nomeAutor,
+      'autorUid': autorUid,
       'fotoAutorUrl': fotoAutorUrl,
       'imagemUrl': imagemUrl,
-      'curtidas': curtidas,
-      'repostagens': repostagens,
+      'curtidoPor': curtidoPor,
+      'repostadoPor': repostadoPor,
       'dataCriacao': Timestamp.fromDate(dataCriacao),
     };
   }
@@ -42,10 +49,11 @@ class Postagem {
       id: id,
       texto: map['texto'] ?? '',
       nomeAutor: map['nomeAutor'] ?? '',
+      autorUid: map['autorUid'] ?? '',
       fotoAutorUrl: map['fotoAutorUrl'],
       imagemUrl: map['imagemUrl'],
-      curtidas: map['curtidas'] ?? 0,
-      repostagens: map['repostagens'] ?? 0,
+      curtidoPor: List<String>.from(map['curtidoPor'] ?? []),
+      repostadoPor: List<String>.from(map['repostadoPor'] ?? []),
       dataCriacao: (map['dataCriacao'] as Timestamp).toDate(),
     );
   }

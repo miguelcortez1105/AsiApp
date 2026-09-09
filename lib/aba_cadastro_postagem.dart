@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'postagem.dart';
+import 'package:asiapp_mobile/postagem.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -18,8 +18,7 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
   Uint8List? _imagemSelecionada;
   bool _publicando = false;
 
-  String get _nomeUsuarioLogado =>
-      FirebaseAuth.instance.currentUser?.email ?? 'Usuário desconhecido';
+  String get _meuUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   Future<void> _selecionarImagem() async {
     final origem = await showModalBottomSheet<ImageSource>(
@@ -65,8 +64,13 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     });
 
     try {
-      String? imagemUrl;
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) throw Exception('Usuário não autenticado');
 
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final nomeReal = userDoc.data()?['name'] ?? 'Usuário';
+
+      String? imagemUrl;
       if (_imagemSelecionada != null) {
         final nomeArquivo = 'postagens/${DateTime.now().millisecondsSinceEpoch}.jpg';
         final ref = FirebaseStorage.instance.ref().child(nomeArquivo);
@@ -76,18 +80,15 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
 
       final novaPostagem = Postagem(
         texto: _textoController.text.trim(),
-        nomeAutor: _nomeUsuarioLogado,
+        nomeAutor: nomeReal,
+        autorUid: uid,
         imagemUrl: imagemUrl,
       );
 
-      await FirebaseFirestore.instance
-          .collection('postagens')
-          .add(novaPostagem.toMap());
+      await FirebaseFirestore.instance.collection('postagens').add(novaPostagem.toMap());
 
       _textoController.clear();
-      setState(() {
-        _imagemSelecionada = null;
-      });
+      setState(() => _imagemSelecionada = null);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,9 +102,7 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
         );
       }
     } finally {
-      setState(() {
-        _publicando = false;
-      });
+      setState(() => _publicando = false);
     }
   }
 
@@ -208,7 +207,7 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('postagens')
-                  .where('nomeAutor', isEqualTo: _nomeUsuarioLogado)
+                  .where('autorUid', isEqualTo: _meuUid)
                   .orderBy('dataCriacao', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {

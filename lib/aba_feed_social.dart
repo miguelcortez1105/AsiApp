@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'postagem.dart';
 
 class AbaFeedSocial extends StatefulWidget {
@@ -10,19 +11,38 @@ class AbaFeedSocial extends StatefulWidget {
 }
 
 class _AbaFeedSocialState extends State<AbaFeedSocial> {
-  // TODO: implementar controle de "já curtiu"/"já repostou" por usuário (subcoleção)
-  Future<void> _curtir(Postagem postagem) async {
-    await FirebaseFirestore.instance
-        .collection('postagens')
-        .doc(postagem.id)
-        .update({'curtidas': postagem.curtidas + 1});
+  String? get _meuUid => FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> _alternarCurtida(Postagem postagem) async {
+    final uid = _meuUid;
+    if (uid == null) return;
+
+    final ref = FirebaseFirestore.instance.collection('postagens').doc(postagem.id);
+    if (postagem.curtidoPorMim(uid)) {
+      await ref.update({
+        'curtidoPor': FieldValue.arrayRemove([uid]),
+      });
+    } else {
+      await ref.update({
+        'curtidoPor': FieldValue.arrayUnion([uid]),
+      });
+    }
   }
 
-  Future<void> _repostar(Postagem postagem) async {
-    await FirebaseFirestore.instance
-        .collection('postagens')
-        .doc(postagem.id)
-        .update({'repostagens': postagem.repostagens + 1});
+  Future<void> _alternarRepost(Postagem postagem) async {
+    final uid = _meuUid;
+    if (uid == null) return;
+
+    final ref = FirebaseFirestore.instance.collection('postagens').doc(postagem.id);
+    if (postagem.repostadoPorMim(uid)) {
+      await ref.update({
+        'repostadoPor': FieldValue.arrayRemove([uid]),
+      });
+    } else {
+      await ref.update({
+        'repostadoPor': FieldValue.arrayUnion([uid]),
+      });
+    }
   }
 
   @override
@@ -41,7 +61,6 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
         }
 
         final documentos = snapshot.data?.docs ?? [];
-
         if (documentos.isEmpty) {
           return const Center(child: Text('Nenhuma postagem ainda'));
         }
@@ -52,6 +71,8 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
           itemBuilder: (context, index) {
             final doc = documentos[index];
             final postagem = Postagem.fromMap(doc.id, doc.data() as Map<String, dynamic>);
+            final euCurti = postagem.curtidoPorMim(_meuUid);
+            final euRepostei = postagem.repostadoPorMim(_meuUid);
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -94,14 +115,20 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.favorite_border),
-                          onPressed: () => _curtir(postagem),
+                          icon: Icon(
+                            euCurti ? Icons.favorite : Icons.favorite_border,
+                            color: euCurti ? Colors.red : null,
+                          ),
+                          onPressed: () => _alternarCurtida(postagem),
                         ),
                         Text('${postagem.curtidas}'),
                         const SizedBox(width: 16),
                         IconButton(
-                          icon: const Icon(Icons.repeat),
-                          onPressed: () => _repostar(postagem),
+                          icon: Icon(
+                            Icons.repeat,
+                            color: euRepostei ? Colors.green : null,
+                          ),
+                          onPressed: () => _alternarRepost(postagem),
                         ),
                         Text('${postagem.repostagens}'),
                       ],

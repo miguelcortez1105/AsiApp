@@ -1,7 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../cadastro-de-projetos/cadastro-de-projetos.dart';
 import '../mngmt/gestao_de_pessoas.dart';
+import '../mngmt/gestao_financeira.dart';
 import '../perfil/perfil_screen.dart';
+import '../core/data/firebase_repository.dart';
+import '../../menu_postagem_screen.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -12,6 +19,7 @@ const _coral = Color(0xFFE76F51);
 
 class Project {
   const Project({
+    this.id = '',
     required this.name,
     required this.area,
     required this.manager,
@@ -20,7 +28,9 @@ class Project {
     required this.progress,
     required this.status,
     required this.color,
+    this.memberIds = const [],
   });
+  final String id;
   final String name;
   final String area;
   final String manager;
@@ -29,10 +39,39 @@ class Project {
   final double progress;
   final String status;
   final Color color;
+  final List<String> memberIds;
+
+  factory Project.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data() ?? {};
+    final colorValue = (data['color'] as String? ?? '087E8B')
+        .replaceFirst('#', '');
+    final rawMemberIds = data['memberIds'];
+    final memberIds = rawMemberIds is List
+      ? rawMemberIds.whereType<String>().toList()
+      : <String>[];
+    final rawMembers = data['members'];
+    return Project(
+      id: document.id,
+      name: data['name'] as String? ?? 'Projeto sem nome',
+      area: data['area'] as String? ?? 'Outros',
+      manager: data['manager'] as String? ?? 'Não informado',
+        members: rawMembers is String
+          ? rawMembers
+          : '${memberIds.length} pessoas',
+      value: data['value'] as String? ?? 'R\$ 0',
+      progress: (data['progress'] as num?)?.toDouble() ?? 0,
+      status: data['status'] as String? ?? 'Sem status',
+      color: Color(int.tryParse('FF$colorValue', radix: 16) ?? 0xFF087E8B),
+      memberIds: memberIds,
+    );
+  }
 }
 
 const projects = [
   Project(
+    id: 'demo-portal',
     name: 'Portal de Clientes',
     area: 'Digital',
     manager: 'Miguel',
@@ -43,6 +82,7 @@ const projects = [
     color: _teal,
   ),
   Project(
+    id: 'demo-expansao',
     name: 'Expansão Asimov',
     area: 'Operações',
     manager: 'Matheus',
@@ -53,6 +93,7 @@ const projects = [
     color: _coral,
   ),
   Project(
+    id: 'demo-academia',
     name: 'Academia de Itajubá',
     area: 'Pessoas',
     manager: 'Matheus',
@@ -63,6 +104,7 @@ const projects = [
     color: Color(0xFF4C6FFF),
   ),
   Project(
+    id: 'demo-dados',
     name: 'Modernização de Dados',
     area: 'Tecnologia',
     manager: 'Leo',
@@ -75,7 +117,13 @@ const projects = [
 ];
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.profile = const UserProfile(name: 'Miguel Cortez', email: 'miguel@asimovjr.com.br')});
+  const HomePage({
+    super.key,
+    this.profile = const UserProfile(
+      name: 'Miguel Cortez',
+      email: 'miguel@asimovjr.com.br',
+    ),
+  });
 
   final UserProfile profile;
 
@@ -86,14 +134,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
   late UserProfile _profile = widget.profile;
+  late List<Project> _projects =
+      Hierarchy.canManageProjects(widget.profile.role) ? projects : [];
+  StreamSubscription<List<Project>>? _projectsSubscription;
 
-  List<Project> get _profileProjects => projects;
+  @override
+  void initState() {
+    super.initState();
+    _projectsSubscription = FirebaseRepository.instance.watchProjects(
+      memberId: Hierarchy.canManageProjects(_profile.role)
+          ? null
+          : (_profile.uid.isEmpty ? '__missing_uid__' : _profile.uid),
+    ).listen(
+      (loadedProjects) {
+        if (mounted) {
+          setState(() => _projects = loadedProjects);
+        }
+      },
+      onError: (_) {},
+    );
+  }
+
+  @override
+  void dispose() {
+    _projectsSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final filteredProjects = _selectedArea == 'Todas'
-        ? projects
-        : projects.where((project) => project.area == _selectedArea).toList();
+      ? _projects
+      : _projects.where((project) => project.area == _selectedArea).toList();
     return Scaffold(
       backgroundColor: _paper,
       body: SafeArea(
@@ -172,13 +244,17 @@ class _HomePageState extends State<HomePage> {
             _showEditProfileDialog();
           } else if (value == 'people') {
             _openPeopleManagement();
+          } else if (value == 'finance') {
+            _openFinancialManagement();
+          } else if (value == 'posting') {
+            _openPostingMenu();
           } else {
-            _showProjectsDialog();
+            _openProjects();
           }
         },
         tooltip: 'Abrir perfil',
         offset: const Offset(0, 48),
-        itemBuilder: (context) => const [
+        itemBuilder: (context) => [
           PopupMenuItem(
             value: 'profile',
             child: ListTile(
@@ -200,7 +276,15 @@ class _HomePageState extends State<HomePage> {
             child: ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.folder_outlined),
-              title: Text('Meus projetos'),
+              title: Text('Projetos'),
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'posting',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.campaign_outlined),
+              title: Text('Menu de postagem'),
             ),
           ),
           PopupMenuItem(
@@ -211,6 +295,15 @@ class _HomePageState extends State<HomePage> {
               title: Text('Gestão de pessoas'),
             ),
           ),
+          if (Hierarchy.canViewFinance(_profile.role))
+            const PopupMenuItem(
+              value: 'finance',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.account_balance_outlined),
+                title: Text('Gestão financeira'),
+              ),
+            ),
         ],
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -220,7 +313,10 @@ class _HomePageState extends State<HomePage> {
               backgroundColor: Color(0xFFFFC857),
               child: Text(
                 _initials(_profile.name),
-                style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -293,38 +389,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showProjectsDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Projetos de ${_profile.name}'),
-        content: SizedBox(
-          width: 360,
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: _profileProjects.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final project = _profileProjects[index];
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: project.color.withAlpha(24),
-                  child: Icon(Icons.folder_outlined, color: project.color),
-                ),
-                title: Text(project.name),
-                subtitle: Text('${project.area} • ${project.status}'),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
-          ),
-        ],
+  void _openFinancialManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GestaoFinanceira(currentProfile: _profile),
       ),
+    );
+  }
+
+  void _openProjects() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CadastroDeProjetos(currentProfile: _profile),
+      ),
+    );
+  }
+
+  void _openPostingMenu() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const MenuPostagemScreen()),
     );
   }
 
@@ -378,8 +461,8 @@ class _HomePageState extends State<HomePage> {
       ),
       _KpiData(
         'Projetos ativos',
-        '18',
-        '4 áreas de projetos',
+        '${_projects.length}',
+        '${_projects.map((project) => project.area).toSet().length} áreas de projetos',
         Icons.layers_outlined,
         const Color(0xFF4C6FFF),
         '3 em atenção',
@@ -541,10 +624,11 @@ class _HomePageState extends State<HomePage> {
         ),
         itemBuilder: (context) => [
           'Todas',
-          'Digital',
-          'Operações',
+          'Mobile',
+          'Desktop',
+          'Dados',
+          'Sites',
           'Pessoas',
-          'Tecnologia',
         ].map((area) => PopupMenuItem(value: area, child: Text(area))).toList(),
       ),
     ],

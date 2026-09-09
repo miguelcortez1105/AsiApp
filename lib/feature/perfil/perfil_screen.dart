@@ -1,21 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../core/data/firebase_repository.dart';
 
 class UserProfile {
   const UserProfile({
     required this.name,
     required this.email,
     this.role = 'Membro',
+    this.uid = '',
+    this.photoUrl,
   });
 
   final String name;
   final String email;
   final String role;
+  final String uid;
+  final String? photoUrl;
 
-  UserProfile copyWith({String? name}) => UserProfile(
+  UserProfile copyWith({String? name, String? email, String? role, String? photoUrl}) => UserProfile(
         name: name ?? this.name,
-        email: email,
-        role: role,
+        email: email ?? this.email,
+        role: role ?? this.role,
+        uid: uid,
+        photoUrl: photoUrl ?? this.photoUrl,
       );
+
+  Map<String, dynamic> toFirestore() => {
+        'name': name,
+        'email': email,
+        'role': role,
+        'photoUrl': photoUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+  factory UserProfile.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    final data = document.data() ?? {};
+    return UserProfile(
+      uid: document.id,
+      name: data['name'] as String? ?? 'Usuário',
+      email: data['email'] as String? ?? '',
+      role: data['role'] as String? ?? 'Membro',
+      photoUrl: data['photoUrl'] as String?,
+    );
+  }
 }
 
 class PerfilScreen extends StatefulWidget {
@@ -44,7 +76,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
     super.dispose();
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
     final name = _nomeController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +84,37 @@ class _PerfilScreenState extends State<PerfilScreen>{
       );
       return;
     }
-    Navigator.of(context).pop(widget.profile.copyWith(name: name));
+    final updatedProfile = widget.profile.copyWith(name: name);
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null) {
+      await firebaseUser.updateDisplayName(name);
+      await FirebaseRepository.instance.saveProfile(
+        updatedProfile.copyWith(
+          name: name,
+        ),
+      );
+    }
+    if (mounted) Navigator.of(context).pop(updatedProfile);
+  }
+
+  Future<void> _changePhoto() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) return;
+    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    final extension = image.name.split('.').last.toLowerCase();
+    final photoUrl = await FirebaseRepository.instance.uploadProfileImage(
+      uid: firebaseUser.uid,
+      bytes: bytes,
+      extension: extension == 'jpg' ? 'jpeg' : extension,
+    );
+    await firebaseUser.updatePhotoURL(photoUrl);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto atualizada com sucesso.')),
+      );
+    }
   }
 
   @override
@@ -76,9 +138,7 @@ class _PerfilScreenState extends State<PerfilScreen>{
             const SizedBox(height: 8),
             Center(
               child: TextButton(
-                onPressed: (){
-                 //logica de trocar foto   
-                },
+                onPressed: _changePhoto,
                 child: const Text ('Alterar foto'),
               ),
             ),

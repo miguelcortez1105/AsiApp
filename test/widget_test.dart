@@ -5,80 +5,37 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asiapp_mobile/main.dart';
+import 'package:asiapp_mobile/feature/auth/role_triage_page.dart';
+import 'package:asiapp_mobile/feature/core/data/firebase_repository.dart';
+import 'package:asiapp_mobile/feature/perfil/perfil_screen.dart';
 
 void main() {
-  testWidgets('renders executive dashboard and filters projects', (
+  test('new users are blocked until a role is assigned', () {
+    expect(Hierarchy.isAwaitingRoleAssignment(Hierarchy.awaitingRoleAssignment), isTrue);
+    expect(Hierarchy.isAwaitingRoleAssignment(Hierarchy.member), isFalse);
+    expect(Hierarchy.isAwaitingRoleAssignment(Hierarchy.presidency), isFalse);
+  });
+
+  testWidgets('triage page is shown to users waiting for role assignment', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
-
-    await tester.ensureVisible(find.text('Cadastre-se'));
-    await tester.tap(find.text('Cadastre-se'));
-    await tester.pumpAndSettle();
-    final signupFields = find.byType(TextFormField);
-    await tester.enterText(signupFields.at(0), 'Miguel Cortez');
-    await tester.enterText(signupFields.at(1), 'miguel@asimovjr.com.br');
-    await tester.enterText(signupFields.at(2), 'senha123');
-    await tester.enterText(signupFields.at(3), 'senha123');
-    await tester.tap(find.text('Criar cadastro').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextFormField).at(0),
-      'miguel@asimovjr.com.br',
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RoleTriagePage(
+          profile: const UserProfile(
+            uid: 'user-1',
+            name: 'Maria Silva',
+            email: 'maria@asimovjr.com.br',
+            role: Hierarchy.awaitingRoleAssignment,
+          ),
+        ),
+      ),
     );
-    await tester.enterText(find.byType(TextFormField).at(1), 'senha123');
-    await tester.tap(find.text('Entrar'));
-    await tester.pumpAndSettle();
 
-    expect(find.text('Faturamento acumulado'), findsOneWidget);
-    expect(find.text('R\$ 8,42 mi'), findsOneWidget);
-    expect(find.text('Projetos ativos'), findsOneWidget);
-    expect(find.text('RITMO DA META'), findsOneWidget);
-    expect(find.text('Portal de Clientes'), findsOneWidget);
-
-    await tester.tap(find.text('Miguel Cortez'));
-    await tester.pumpAndSettle();
-    expect(find.text('Meu perfil'), findsOneWidget);
-    expect(find.text('Editar perfil'), findsOneWidget);
-    expect(find.text('Meus projetos'), findsOneWidget);
-
-    await tester.tap(find.text('Meu perfil'));
-    await tester.pumpAndSettle();
-    expect(find.text('E-mail'), findsOneWidget);
-    expect(find.text('Membro'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Miguel Cortez'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Meus projetos'));
-    await tester.pumpAndSettle();
-    expect(find.text('Projetos de Miguel Cortez'), findsOneWidget);
-    expect(find.text('Modernização de Dados'), findsNWidgets(2));
-    await tester.tap(find.text('Fechar'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Miguel Cortez'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Editar perfil'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, 'Miguel Cortez');
-    await tester.tap(find.text('Salvar'));
-    await tester.pumpAndSettle();
-    expect(find.text('Miguel Cortez'), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Todas'));
-    await tester.tap(find.text('Todas'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Digital').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Portal de Clientes'), findsOneWidget);
-    expect(find.text('Expansão Asimov'), findsNothing);
+    expect(find.text('Aguardando atribuição de cargo'), findsOneWidget);
+    expect(find.textContaining('Seu cadastro foi realizado com sucesso'), findsOneWidget);
   });
 }

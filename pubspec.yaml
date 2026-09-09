@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_svg: ^2.0.0
   google_fonts: ^6.2.1
   flutter:
     sdk: flutter
@@ -35,6 +36,14 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  image_picker: ^1.2.3
+  image_cropper: ^12.2.1
+  firebase_core: ^4.14.0
+  cloud_firestore: ^6.8.0
+  firebase_auth: ^6.6.1
+  firebase_storage: ^13.0.2
+  table_calendar: ^3.2.1
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +63,12 @@ dev_dependencies:
 flutter:
 
   assets:
-    - assets/logo.png
+    - assets/images/logo.png
+    - assets/images/bg_login_celular.png
+    - assets/images/bg_login_tablet.png
+    - assets/images/asimembro-branco.png
+    - assets/images/asimembro-branco.svg
+    - assets/images/google.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

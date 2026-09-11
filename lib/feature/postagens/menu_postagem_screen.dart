@@ -1,17 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'aba_calendario.dart';
 import 'aba_cadastro_postagem.dart';
 import 'aba_feed_social.dart';
-import 'postagem.dart';
 import '../perfil/perfil_screen.dart';
-import 'package:asiapp_mobile/feature/core/theme/app_colors.dart';
-import 'package:asiapp_mobile/feature/core/widgets/app_header.dart';
-import '../core/widgets/app_bottom_nav.dart';
 import '../core/widgets/app_background.dart';
+import '../core/widgets/app_bottom_nav.dart';
+import '../core/widgets/app_header.dart';
+import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 
 class MenuPostagemScreen extends StatefulWidget {
   const MenuPostagemScreen({super.key, required this.currentProfile});
+
   final UserProfile currentProfile;
 
   @override
@@ -21,9 +23,6 @@ class MenuPostagemScreen extends StatefulWidget {
 class _MenuPostagemScreenState extends State<MenuPostagemScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  final List<Postagem> _postagensSimuladas = []; // TODO: substituir por dados reais do Firestore
-  final String nomeUsuarioLogado = 'Ana Alves'; // TODO: buscar do Firestore quando conectado
 
   @override
   void initState() {
@@ -53,7 +52,6 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
                   left: isWide ? 48 : 20,
                   right: isWide ? 48 : 20,
                   top: isWide ? 34 : 22,
-                  bottom: isWide ? 34 : 100,
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -83,14 +81,10 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
                         Expanded(
                           child: TabBarView(
                             controller: _tabController,
-                            children: [
-                              const AbaCalendario(),
-                              AbaCadastroPostagem(
-                                postagens: _postagensSimuladas,
-                                nomeUsuarioLogado: nomeUsuarioLogado,
-                                aoPublicar: () => setState(() {}),
-                              ),
-                              AbaFeedSocial(postagens: _postagensSimuladas),
+                            children: const [
+                              AbaCalendario(),
+                              AbaCadastroPostagem(),
+                              AbaFeedSocial(),
                             ],
                           ),
                         ),

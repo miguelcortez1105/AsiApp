@@ -5,22 +5,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
+import '../core/widgets/app_bottom_nav.dart';
+import '../core/widgets/app_background.dart';
+import '../core/widgets/app_header.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
 
-const _ink = Color(0xFF17212B);
-const _muted = Color(0xFF6E7A86);
-const _paper = Color(0xFFF5F7F8);
-const _teal = Color(0xFF087E8B);
-const _coral = Color(0xFFE76F51);
-
-
-const _roles = [
-	'Administrador',
-	'Presidência',
-	'Vice-Presidência',
-	'Diretoria',
-	'Gerência',
-	'Membro',
-];
 const _roles = Hierarchy.roles;
 
 class PersonRecord {
@@ -81,8 +71,6 @@ class GestaoDePessoas extends StatefulWidget {
   State<GestaoDePessoas> createState() => _GestaoDePessoasState();
 }
 
-//dados_mockados
-
 class _GestaoDePessoasState extends State<GestaoDePessoas> {
   final List<PersonRecord> _people = [
     const PersonRecord(
@@ -141,9 +129,6 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
 
   bool get _canEdit => Hierarchy.canAssignRole(widget.currentProfile.role);
 
-//cargos
-
-	String _selectedArea = 'Todas';
   @override
   void initState() {
     super.initState();
@@ -184,142 +169,112 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
     }
 
     return Scaffold(
-      backgroundColor: _paper,
-      appBar: AppBar(
-        title: const Text('Gestão de pessoas'),
-        backgroundColor: _paper,
-        foregroundColor: _ink,
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: constraints.maxWidth >= 900 ? 48 : 20,
-              vertical: 24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1160),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 22),
-                    _buildHierarchyCard(),
-                    const SizedBox(height: 28),
-                    Row(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: AppBackground(
+        child: SafeArea(
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 900;
+              return SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: isWide ? 48 : 20,
+                  right: isWide ? 48 : 20,
+                  top: isWide ? 34 : 22,
+                  bottom: isWide ? 34 : 100,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Expanded(
-                          child: Text(
-                            'Pessoas por área',
-                            style: TextStyle(
-                              color: _ink,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                        _buildHeader(),
+                        const SizedBox(height: 22),
+                        _buildHierarchyCard(),
+                        const SizedBox(height: 28),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Pessoas por área',
+                                style: AppTextStyles.body.copyWith(color: AppColors.white),
+                              ),
                             ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 180,
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _selectedArea,
-                            decoration: const InputDecoration(
-                              labelText: 'Área',
-                              isDense: true,
+                            SizedBox(
+                              width: 180,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedArea,
+                                isExpanded: true,
+                                dropdownColor: const Color(0xFF0F142C),
+                                style: AppTextStyles.body.copyWith(color: AppColors.white),
+                                decoration: InputDecoration(
+                                  labelText: 'Área',
+                                  labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+                                  isDense: true,
+                                ),
+                                items: _areas
+                                    .map(
+                                      (area) => DropdownMenuItem(
+                                        value: area,
+                                        child: Text(
+                                          area,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (area) {
+                                  if (area != null) {
+                                    setState(() => _selectedArea = area);
+                                  }
+                                },
+                              ),
                             ),
-                            items: _areas
-                                .map(
-                                  (area) => DropdownMenuItem(
-                                    value: area,
-                                    child: Text(area),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (area) {
-                              if (area != null) {
-                                setState(() => _selectedArea = area);
-                              }
-                            },
-                          ),
+                          ],
                         ),
+                        const SizedBox(height: 14),
+                        if (groupedPeople.isEmpty)
+                          Text(
+                            'Nenhuma pessoa encontrada nesta área.',
+                            style: AppTextStyles.body.copyWith(color: AppColors.white),
+                          )
+                        else
+                          ...groupedPeople.entries.map(
+                            (entry) => _buildAreaSection(entry.key, entry.value),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    if (groupedPeople.isEmpty)
-                      const Text('Nenhuma pessoa encontrada nesta área.')
-                    else
-                      ...groupedPeople.entries.map(
-                        (entry) => _buildAreaSection(entry.key, entry.value),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentTab: AppTab.pessoas,
+        profile: widget.currentProfile,
       ),
     );
   }
 
-//estrutura e hierarquia
-
-	Widget _buildHeader() => Column(
-				crossAxisAlignment: CrossAxisAlignment.start,
-				children: [
-					const Text(
-						'ESTRUTURA ORGANIZACIONAL',
-						style: TextStyle(
-							color: _teal,
-							fontSize: 12,
-							fontWeight: FontWeight.w800,
-							letterSpacing: 1.4,
-						),
-					),
-					const SizedBox(height: 8),
-					const Text(
-						'Pessoas e hierarquia',
-						style: TextStyle(
-							color: _ink,
-							fontSize: 30,
-							fontWeight: FontWeight.w800,
-						),
-					),
-					const SizedBox(height: 8),
-					Text(
-						_canEdit
-								? 'Você pode atualizar cargo e status dos membros.'
-								: 'Todos podem consultar cargos, áreas e status. A edição é restrita às lideranças autorizadas.',
-						style: const TextStyle(color: _muted, fontSize: 15),
-					),
-				],
-			);
   Widget _buildHeader() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        'ESTRUTURA ORGANIZACIONAL',
-        style: TextStyle(
-          color: _teal,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.4,
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Pessoas e hierarquia',
-        style: TextStyle(
-          color: _ink,
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-        ),
+      const ScreenHeader(
+        tela: 'G E S T Ã O',
+        title: 'Gestão de Pessoas',
+        subtitle: 'Acompanhe e gerencie todos os membros da empresa!',
       ),
       const SizedBox(height: 8),
       Text(
         _canEdit
             ? 'Você pode atualizar cargo e status dos membros.'
             : 'Todos podem consultar cargos, áreas e status. A edição é restrita às lideranças autorizadas.',
-        style: const TextStyle(color: _muted, fontSize: 15),
+        style: AppTextStyles.caption.copyWith(color: AppColors.white),
       ),
     ],
   );
@@ -334,13 +289,9 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Hierarquia de acesso',
-            style: TextStyle(
-              color: _ink,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.h2.copyWith(color: AppColors.ink),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -356,9 +307,9 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Edição de cargo e status: Gerência da área, Vice-Presidência e Diretoria.',
-            style: TextStyle(color: _muted, fontSize: 13),
+            style: AppTextStyles.caption.copyWith(color: AppColors.muted),
           ),
         ],
       ),
@@ -376,7 +327,10 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
         initiallyExpanded: true,
         title: Text(
           area,
-          style: const TextStyle(color: _ink, fontWeight: FontWeight.w800),
+          style: AppTextStyles.body.copyWith(
+            color: AppColors.ink,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         subtitle: Text(
           '${people.length} ${people.length == 1 ? 'pessoa' : 'pessoas'}',
@@ -389,12 +343,12 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
   Widget _buildPersonTile(PersonRecord person) => ListTile(
     leading: CircleAvatar(
       backgroundColor: person.isActive
-          ? _teal.withAlpha(24)
-          : _muted.withAlpha(24),
+          ? AppColors.primary.withAlpha(24)
+          : AppColors.muted.withAlpha(24),
       child: Text(
         _initials(person.name),
         style: TextStyle(
-          color: person.isActive ? _teal : _muted,
+          color: person.isActive ? AppColors.primary : AppColors.muted,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -408,13 +362,13 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
         Chip(
           label: Text(person.isActive ? 'Ativo' : 'Inativo'),
           labelStyle: TextStyle(
-            color: person.isActive ? _teal : _muted,
+            color: person.isActive ? AppColors.primary : AppColors.muted,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
           backgroundColor: person.isActive
-              ? _teal.withAlpha(18)
-              : _muted.withAlpha(18),
+              ? AppColors.primary.withAlpha(18)
+              : AppColors.muted.withAlpha(18),
           side: BorderSide.none,
         ),
         if (_canEdit)
@@ -506,7 +460,7 @@ class _RoleChip extends StatelessWidget {
   Widget build(BuildContext context) => Chip(
     avatar: CircleAvatar(
       radius: 10,
-      backgroundColor: canEdit ? _coral : _teal,
+      backgroundColor: canEdit ? AppColors.coral : AppColors.primary,
       child: Text(
         '$level',
         style: const TextStyle(color: Colors.white, fontSize: 11),
@@ -514,8 +468,8 @@ class _RoleChip extends StatelessWidget {
     ),
     label: Text(role),
     side: BorderSide(
-      color: canEdit ? _coral.withAlpha(90) : _teal.withAlpha(90),
+      color: canEdit ? AppColors.coral.withAlpha(90) : AppColors.primary.withAlpha(90),
     ),
-    backgroundColor: canEdit ? _coral.withAlpha(12) : _teal.withAlpha(12),
+    backgroundColor: canEdit ? AppColors.coral.withAlpha(12) : AppColors.primary.withAlpha(12),
   );
 }

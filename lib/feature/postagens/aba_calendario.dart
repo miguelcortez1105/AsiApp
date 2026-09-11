@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:asiapp_mobile/evento.dart';
+import 'package:asiapp_mobile/feature/postagens/evento.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -64,7 +64,12 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final role = doc.data()?['role'];
+    print('Role carregado do Firestore: "$role"');
     setState(() {
       _roleUsuarioLogado = doc.data()?['role'];
     });
@@ -73,7 +78,11 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   Map<DateTime, List<Evento>> _agruparPorDia(List<Evento> eventos) {
     final Map<DateTime, List<Evento>> mapa = {};
     for (final evento in eventos) {
-      final diaSemHora = DateTime.utc(evento.data.year, evento.data.month, evento.data.day);
+      final diaSemHora = DateTime.utc(
+        evento.data.year,
+        evento.data.month,
+        evento.data.day,
+      );
       mapa.putIfAbsent(diaSemHora, () => []).add(evento);
     }
     return mapa;
@@ -85,8 +94,12 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   }
 
   void _abrirFormularioEvento({Evento? eventoParaEditar}) {
-    final tituloController = TextEditingController(text: eventoParaEditar?.titulo ?? '');
-    final horarioController = TextEditingController(text: eventoParaEditar?.horario ?? '');
+    final tituloController = TextEditingController(
+      text: eventoParaEditar?.titulo ?? '',
+    );
+    final horarioController = TextEditingController(
+      text: eventoParaEditar?.horario ?? '',
+    );
     List<String> areasSelecionadas = List.from(eventoParaEditar?.areas ?? []);
 
     showDialog(
@@ -95,7 +108,9 @@ class _AbaCalendarioState extends State<AbaCalendario> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: Text(eventoParaEditar == null ? 'Novo evento' : 'Editar evento'),
+              title: Text(
+                eventoParaEditar == null ? 'Novo evento' : 'Editar evento',
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -106,7 +121,9 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                     ),
                     TextField(
                       controller: horarioController,
-                      decoration: const InputDecoration(labelText: 'Horário (ex: 18:00)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Horário (ex: 18:00)',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     const Align(
@@ -153,10 +170,10 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                           .collection('eventos')
                           .doc(eventoParaEditar.id)
                           .update({
-                        'titulo': tituloController.text.trim(),
-                        'horario': horarioController.text.trim(),
-                        'areas': areasSelecionadas,
-                      });
+                            'titulo': tituloController.text.trim(),
+                            'horario': horarioController.text.trim(),
+                            'areas': areasSelecionadas,
+                          });
                     } else {
                       final novoEvento = Evento(
                         titulo: tituloController.text.trim(),
@@ -226,10 +243,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                 ),
               ),
               const SizedBox(width: 4),
-              Text(
-                entrada.key,
-                style: const TextStyle(fontSize: 12),
-              ),
+              Text(entrada.key, style: const TextStyle(fontSize: 12)),
             ],
           );
         }).toList(),
@@ -251,99 +265,122 @@ class _AbaCalendarioState extends State<AbaCalendario> {
 
         final documentos = snapshot.data?.docs ?? [];
         final eventos = documentos
-            .map((doc) => Evento.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+            .map(
+              (doc) =>
+                  Evento.fromMap(doc.id, doc.data() as Map<String, dynamic>),
+            )
             .toList();
         final eventosPorDia = _agruparPorDia(eventos);
-        final eventosDoDiaAtual = _eventosDoDia(eventosPorDia, _diaSelecionado ?? _diaFocado);
+        final eventosDoDiaAtual = _eventosDoDia(
+          eventosPorDia,
+          _diaSelecionado ?? _diaFocado,
+        );
 
-        return Scaffold(
-          body: Column(
-            children: [
-              TableCalendar(
-                firstDay: DateTime.utc(2025, 1, 1),
-                lastDay: DateTime.utc(2050, 12, 31),
-                focusedDay: _diaFocado,
-                selectedDayPredicate: (dia) => isSameDay(_diaSelecionado, dia),
-                onDaySelected: (diaSelecionado, diaFocado) {
-                  setState(() {
-                    _diaSelecionado = diaSelecionado;
-                    _diaFocado = diaFocado;
-                  });
-                },
-                locale: 'pt_BR',
-                eventLoader: (dia) => _eventosDoDia(eventosPorDia, dia),
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, dia, eventosDoDia) {
-                    if (eventosDoDia.isEmpty) return null;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                margin: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    children: [
+                      TableCalendar(
+                        firstDay: DateTime.utc(2025, 1, 1),
+                        lastDay: DateTime.utc(2050, 12, 31),
+                        focusedDay: _diaFocado,
+                        selectedDayPredicate: (dia) => isSameDay(_diaSelecionado, dia),
+                        onDaySelected: (diaSelecionado, diaFocado) {
+                          setState(() {
+                            _diaSelecionado = diaSelecionado;
+                            _diaFocado = diaFocado;
+                          });
+                        },
+                        locale: 'pt_BR',
+                        eventLoader: (dia) => _eventosDoDia(eventosPorDia, dia),
+                        calendarBuilders: CalendarBuilders(
+                          markerBuilder: (context, dia, eventosDoDia) {
+                            if (eventosDoDia.isEmpty) return null;
 
-                    final coresDoDia = <Color>{};
-                    for (final evento in eventosDoDia) {
-                      for (final area in (evento as Evento).areas) {
-                        coresDoDia.add(_coresPorArea[area] ?? Colors.grey);
-                      }
-                    }
+                            final coresDoDia = <Color>{};
+                            for (final evento in eventosDoDia) {
+                              for (final area in (evento as Evento).areas) {
+                                coresDoDia.add(_coresPorArea[area] ?? Colors.grey);
+                              }
+                            }
 
-                    return Positioned(
-                      bottom: 4,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: coresDoDia.map((cor) {
-                          return Container(
-                            width: 6,
-                            height: 6,
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
-                            decoration: BoxDecoration(
-                              color: cor,
-                              shape: BoxShape.circle,
-                            ),
-                          );
-                        }).toList(),
+                            return Positioned(
+                              bottom: 4,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: coresDoDia.map((cor) {
+                                  return Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                                    decoration: BoxDecoration(
+                                      color: cor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  },
+                      _buildLegenda(),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: eventosDoDiaAtual.isEmpty
+                            ? const Center(child: Text('Nenhum evento neste dia'))
+                            : ListView.builder(
+                                itemCount: eventosDoDiaAtual.length,
+                                itemBuilder: (context, index) {
+                                  final evento = eventosDoDiaAtual[index];
+                                  return ListTile(
+                                    leading: const Icon(Icons.event),
+                                    title: Text(evento.titulo),
+                                    subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
+                                    trailing: _podeEditarEventos
+                                        ? Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit, size: 20),
+                                                onPressed: () =>
+                                                    _abrirFormularioEvento(eventoParaEditar: evento),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                                onPressed: () => _excluirEvento(evento),
+                                              ),
+                                            ],
+                                          )
+                                        : null,
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              _buildLegenda(),
-              const SizedBox(height: 16),
-              Expanded(
-                child: eventosDoDiaAtual.isEmpty
-                    ? const Center(child: Text('Nenhum evento neste dia'))
-                    : ListView.builder(
-                        itemCount: eventosDoDiaAtual.length,
-                        itemBuilder: (context, index) {
-                          final evento = eventosDoDiaAtual[index];
-                          return ListTile(
-                            leading: const Icon(Icons.event),
-                            title: Text(evento.titulo),
-                            subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
-                            trailing: _podeEditarEventos
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        onPressed: () =>
-                                            _abrirFormularioEvento(eventoParaEditar: evento),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                                        onPressed: () => _excluirEvento(evento),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-          floatingActionButton: _podeEditarEventos
-              ? FloatingActionButton(
+            ),
+            if (_podeEditarEventos)
+              Positioned(
+                right: 16,
+                bottom: 96,
+                child: FloatingActionButton(
                   onPressed: () => _abrirFormularioEvento(),
                   child: const Icon(Icons.add),
-                )
-              : null,
+                ),
+              ),
+          ],
         );
       },
     );

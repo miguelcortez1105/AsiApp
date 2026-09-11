@@ -1,9 +1,9 @@
 import 'dart:async';
-
+import 'package:asiapp_mobile/feature/core/widgets/app_background.dart';
+import 'package:asiapp_mobile/feature/core/widgets/app_header.dart';
+import 'package:asiapp_mobile/feature/core/widgets/app_bottom_nav.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
-import 'gestao_de_pessoas.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
 
@@ -168,63 +168,10 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   Widget build(BuildContext context) {
     if (!_isAllowed) return _buildAccessDenied();
     return Scaffold(
-      backgroundColor: _surface,
-      appBar: AppBar(
-        title: const Text('Gestão financeira'),
-        backgroundColor: _surface,
-        foregroundColor: _ink,
-        actions: [
-          IconButton(
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
-            tooltip: 'Ir para início',
-            icon: const Icon(Icons.home_outlined),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Abrir módulo',
-            onSelected: (value) {
-              if (value == 'profile') _openProfile();
-              if (value == 'people') _openPeopleManagement();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'profile',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.account_circle_outlined),
-                  title: Text('Meu perfil'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'people',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.groups_outlined),
-                  title: Text('Gestão de pessoas'),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Center(
-              child: Text(
-                widget.currentProfile.role,
-                style: const TextStyle(color: _muted),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_surface, _paper],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AppBackground(
         child: SafeArea(
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               padding: EdgeInsets.symmetric(
@@ -237,6 +184,12 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const ScreenHeader(
+                        tela: 'F I N A N C E I R O',
+                        title: 'Gestão Financeira',
+                        subtitle: 'Acompanhe e gerencie todas as financias da empresa!',
+                      ),
+                      const SizedBox(height: 16),
                       _buildHeader(),
                       const SizedBox(height: 22),
                       _buildTabs(),
@@ -264,21 +217,9 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
               foregroundColor: _ink,
             )
           : null,
-    );
-  }
-
-  void _openPeopleManagement() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => GestaoDePessoas(currentProfile: widget.currentProfile),
-      ),
-    );
-  }
-
-  void _openProfile() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PerfilScreen(profile: widget.currentProfile),
+      bottomNavigationBar: AppBottomNav(
+        currentTab: AppTab.financeiro,
+        profile: widget.currentProfile,
       ),
     );
   }
@@ -331,26 +272,6 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   Widget _buildHeader() => Row(
     crossAxisAlignment: CrossAxisAlignment.end,
     children: [
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Visão financeira',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: _ink,
-              ),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Acompanhe o caixa, compromissos e documentos da organização.',
-              style: TextStyle(color: _muted),
-            ),
-          ],
-        ),
-      ),
       if (_tabIndex != 0)
         OutlinedButton.icon(
           onPressed: _showEntryDialog,

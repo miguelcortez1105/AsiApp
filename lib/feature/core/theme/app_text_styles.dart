@@ -29,6 +29,10 @@ class AppTextStyles {
         fontWeight: FontWeight.w600,
       );
 
+  static TextStyle get h3 => GoogleFonts.poppins(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+      );
   static TextStyle get caption => GoogleFonts.poppins(
         fontSize: 12,
         fontWeight: FontWeight.w400,

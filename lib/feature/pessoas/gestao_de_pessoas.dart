@@ -16,6 +16,15 @@ const _muted = Color(0xFF6E7A86);
 const _teal = Color(0xFF087E8B);
 const _coral = Color(0xFFE76F51);
 
+
+const _roles = [
+	'Administrador',
+	'Presidência',
+	'Vice-Presidência',
+	'Diretoria',
+	'Gerência',
+	'Membro',
+];
 const _roles = Hierarchy.roles;
 
 class PersonRecord {
@@ -76,6 +85,8 @@ class GestaoDePessoas extends StatefulWidget {
   State<GestaoDePessoas> createState() => _GestaoDePessoasState();
 }
 
+//dados_mockados
+
 class _GestaoDePessoasState extends State<GestaoDePessoas> {
   final List<PersonRecord> _people = [
     const PersonRecord(
@@ -134,6 +145,9 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
 
   bool get _canEdit => Hierarchy.canAssignRole(widget.currentProfile.role);
 
+//cargos
+
+	String _selectedArea = 'Todas';
   @override
   void initState() {
     super.initState();
@@ -266,6 +280,38 @@ Widget build(BuildContext context) {
   );
 }
 
+//estrutura e hierarquia
+
+	Widget _buildHeader() => Column(
+				crossAxisAlignment: CrossAxisAlignment.start,
+				children: [
+					const Text(
+						'ESTRUTURA ORGANIZACIONAL',
+						style: TextStyle(
+							color: _teal,
+							fontSize: 12,
+							fontWeight: FontWeight.w800,
+							letterSpacing: 1.4,
+						),
+					),
+					const SizedBox(height: 8),
+					const Text(
+						'Pessoas e hierarquia',
+						style: TextStyle(
+							color: _ink,
+							fontSize: 30,
+							fontWeight: FontWeight.w800,
+						),
+					),
+					const SizedBox(height: 8),
+					Text(
+						_canEdit
+								? 'Você pode atualizar cargo e status dos membros.'
+								: 'Todos podem consultar cargos, áreas e status. A edição é restrita às lideranças autorizadas.',
+						style: const TextStyle(color: _muted, fontSize: 15),
+					),
+				],
+			);
   Widget _buildHeader() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [

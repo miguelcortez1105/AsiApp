@@ -10,6 +10,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'models/dashboard_metrics.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -133,10 +135,65 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
+
   late UserProfile _profile = widget.profile;
+
   late List<Project> _projects =
-      Hierarchy.canManageProjects(widget.profile.role) ? projects : [];
+      Hierarchy.canManageProjects(widget.profile.role)
+       ? projects 
+       : [];
+
   StreamSubscription<List<Project>>? _projectsSubscription;
+
+  StreamSubscription<DashboardMetrics?>? _dashboardSubscription;
+
+  StreamSubscription<List<PortalBjIndicator>>? _portalBjSubscription;
+
+  DashboardMetrics? _dashboardMetrics;
+
+  List<PortalBjIndicator> _portalBjIndicators = [];
+
+  double get _percentualMeta {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null || metrics.annualGoal <= 0) {
+    return 0;
+  }
+
+  return ((metrics.currentRevenue / metrics.annualGoal) * 100)
+      .clamp(0, 100);
+}
+
+double get _gapMeta {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null) {
+    return 0;
+  }
+
+  return (metrics.annualGoal - metrics.currentRevenue)
+      .clamp(0, double.infinity);
+}
+
+double get _variacaoAnual {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null || metrics.previousYearRevenue <= 0) {
+    return 0;
+  }
+
+  return ((metrics.currentRevenue -
+              metrics.previousYearRevenue) /
+          metrics.previousYearRevenue) *
+      100;
+}
+
+String _formatCurrency(double value) {
+  return NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: 'R\$',
+  ).format(value);
+}
 
   @override
   void initState() {
@@ -153,11 +210,44 @@ class _HomePageState extends State<HomePage> {
       },
       onError: (_) {},
     );
+
+  final anoAtual = DateTime.now().year;
+
+  _dashboardSubscription =
+      FirebaseRepository.instance
+          .watchDashboardMetrics(anoAtual)
+          .listen(
+    (metrics) {
+      if (mounted) {
+        setState(() {
+          _dashboardMetrics = metrics;
+        });
+      }
+    },
+    onError: (_) {},
+  );
+
+  _portalBjSubscription =
+      FirebaseRepository.instance
+          .watchPortalBjIndicators(anoAtual)
+          .listen(
+    (indicators) {
+      if (mounted) {
+        setState(() {
+          _portalBjIndicators = indicators;
+        });
+      }
+    },
+    onError: (_) {},
+  );
   }
 
   @override
   void dispose() {
     _projectsSubscription?.cancel();
+    _dashboardSubscription?.cancel();
+    _portalBjSubscription?.cancel();
+
     super.dispose();
   }
 @override
@@ -264,27 +354,34 @@ Widget build(BuildContext context) {
     final cards = [
       _KpiData(
         'Faturamento acumulado',
-        'R\$ 8,42 mi',
-        '92,5% da meta anual',
+        _formatCurrency(
+          _dashboardMetrics?.currentRevenue ?? 0,
+        ),
+        '${_percentualMeta.toStringAsFixed(1)}% da meta anual',
         Icons.trending_up_rounded,
         _teal,
-        '+12,8% vs. 2025',
+        '${_variacaoAnual >= 0 ? '+' : ''}'
+            '${_variacaoAnual.toStringAsFixed(1)}% vs. ano anterior',
       ),
+
       _KpiData(
         'Meta anual',
-        'R\$ 9,10 mi',
-        'R\$ 680 mil restantes',
+        _formatCurrency(
+          _dashboardMetrics?.annualGoal ?? 0,
+        ),
+        '${_formatCurrency(_gapMeta)} restantes',
         Icons.flag_outlined,
         _coral,
-        'Dezembro de 2026',
+        'Ano ${DateTime.now().year}',
       ),
+
       _KpiData(
         'Projetos ativos',
         '${_projects.length}',
         '${_projects.map((project) => project.area).toSet().length} áreas de projetos',
         Icons.layers_outlined,
         const Color(0xFF4C6FFF),
-        '3 em atenção',
+        'Dados do Firebase',
       ),
     ];
     return GridView.builder(

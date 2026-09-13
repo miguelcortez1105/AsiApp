@@ -744,8 +744,8 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.primary, // Cor azul vibrante
-      borderRadius: BorderRadius.circular(24), // Bordas mais arredondadas como no print
+      color: AppColors.primary,
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,19 +784,33 @@ class _ProjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            Row(
-              children: [
-                const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
-                const SizedBox(width: 6),
-                Text(
-                  project.members.replaceAll(RegExp(r'[^0-9]'), ''), 
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+           ],
+        ),
+        const SizedBox(height: 12),
+        
+        Row(
+          children: [
+            const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              project.members.replaceAll(RegExp(r'[^0-9]'), ''),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Icon(Icons.folder_outlined, size: 16, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              'Área: ${project.area}',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.white.withOpacity(0.9),
+              ),
             ),
           ],
         ),

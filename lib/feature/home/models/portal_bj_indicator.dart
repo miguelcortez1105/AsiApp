@@ -25,14 +25,16 @@ class PortalBjIndicator {
   final PortalIndicatorUnit unit;
 
   double get progress {
-    if (goal <= 0) {
-      return 0;
-    }
+    if (goal <= 0) return 0;
 
-    return (achieved / goal).clamp(0, 1);
+    return (((achieved / goal) * 100)
+        .clamp(0.0, 100.0))
+        .toDouble();
   }
 
   double get gap {
-    return (goal - achieved).clamp(0, double.infinity);
+    return ((goal - achieved)
+        .clamp(0.0, double.infinity))
+        .toDouble();
   }
 }

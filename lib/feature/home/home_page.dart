@@ -195,6 +195,19 @@ String _formatCurrency(double value) {
   ).format(value);
 }
 
+String _formatPortalBjValue(PortalBjIndicator indicator) {
+  switch (indicator.unit.toLowerCase()) {
+    case 'moeda':
+      return _formatCurrency(indicator.achieved);
+
+    case 'percentual':
+      return '${indicator.achieved.toStringAsFixed(1)}%';
+
+    default:
+      return indicator.achieved.toStringAsFixed(2);
+  }
+}
+
   @override
   void initState() {
     super.initState();
@@ -429,51 +442,34 @@ Widget build(BuildContext context) {
     ),
   );
 
-  Widget _buildProgressBars() => Column(
-    children: [
-      _ProgressLine(
-        label: 'CSAT',
-        value: .925,
-        amount: '92,5%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Tempo de Permanencia no MEJ',
-        value: .68,
-        amount: '68%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Engajamento com o  MEJ',
-        value: .81,
-        amount: '81%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Politicas de Diversidade e Inclusão',
-        value: .925,
-        amount: '92,5%',
-        color: const Color(0xFF007FFF),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Faturamento Colaborativo',
-        value: .68,
-        amount: '68%',
-        color: const Color(0xFF007FFF),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Projetos de Impacto',
-        value: .81,
-        amount: '81%',
-        color: const Color(0xFF007FFF)
-      ),
-    ],
-  );
+  Widget _buildProgressBars() {
+    if (_portalBjIndicators.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Nenhum indicador encontrado.',
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _portalBjIndicators.map((indicator) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _ProgressLine(
+            label: indicator.name,
+            value: indicator.progress / 100,
+            amount: _formatPortalBjValue(indicator),
+            color: indicator.type.toLowerCase() == 'essencial'
+                ? const Color(0xFF88D46C)
+                : const Color(0xFF007FFF),
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   Widget _buildProjectHeader() => Row(
     children: [

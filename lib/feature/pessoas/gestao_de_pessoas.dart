@@ -72,57 +72,7 @@ class GestaoDePessoas extends StatefulWidget {
 }
 
 class _GestaoDePessoasState extends State<GestaoDePessoas> {
-  final List<PersonRecord> _people = [
-    const PersonRecord(
-      name: 'Miguel Cortez',
-      email: 'miguelcortez@asimovjr.com.br',
-      role: 'Presidência',
-      area: 'Executivo',
-    ),
-    const PersonRecord(
-      name: 'Leticia Cortez',
-      email: 'leticiacortez@asimovjr.com.br',
-      role: 'Diretoria',
-      area: 'Operações',
-    ),
-    const PersonRecord(
-      name: 'Leticia Cavalcante',
-      email: 'leticiacavalcante@asimovjr.com.br',
-      role: 'Gerência',
-      area: 'Operações',
-    ),
-    const PersonRecord(
-      name: 'Miguel Cavalcante',
-      email: 'miguelcavalcante@asimovjr.com.br',
-      role: 'Membro',
-      area: 'Operações',
-    ),
-    const PersonRecord(
-      name: 'Joao',
-      email: 'joao@asimovjr.com.br',
-      role: 'Diretoria',
-      area: 'Tecnologia',
-    ),
-    const PersonRecord(
-      name: 'Joao Cavalcante',
-      email: 'joaocavalcante@asimovjr.com.br',
-      role: 'Membro',
-      area: 'Tecnologia',
-      isActive: false,
-    ),
-    const PersonRecord(
-      name: 'Miguel',
-      email: 'Miguel@asimovjr.com.br',
-      role: 'Gerência',
-      area: 'Pessoas',
-    ),
-    const PersonRecord(
-      name: 'João Cortez',
-      email: 'joaocortez@asimovjr.com.br',
-      role: 'Membro',
-      area: 'Pessoas',
-    ),
-  ];
+  final List<PersonRecord> _people = [];
   StreamSubscription<List<PersonRecord>>? _peopleSubscription;
 
   String _selectedArea = 'Todas';
@@ -207,7 +157,7 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
                               child: DropdownButtonFormField<String>(
                                 initialValue: _selectedArea,
                                 isExpanded: true,
-                                dropdownColor: const Color(0xFF0F142C),
+                                dropdownColor: AppColors.ink,
                                 style: AppTextStyles.body.copyWith(color: AppColors.white),
                                 decoration: InputDecoration(
                                   labelText: 'Área',
@@ -270,19 +220,13 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
         subtitle: 'Acompanhe e gerencie todos os membros da empresa!',
       ),
       const SizedBox(height: 8),
-      Text(
-        _canEdit
-            ? 'Você pode atualizar cargo e status dos membros.'
-            : 'Todos podem consultar cargos, áreas e status. A edição é restrita às lideranças autorizadas.',
-        style: AppTextStyles.caption.copyWith(color: AppColors.white),
-      ),
     ],
   );
 
   Widget _buildHierarchyCard() => Card(
     margin: EdgeInsets.zero,
     elevation: 0,
-    color: Colors.white,
+    color: AppColors.primaryDark,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     child: Padding(
       padding: const EdgeInsets.all(20),
@@ -291,7 +235,7 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
         children: [
           Text(
             'Hierarquia de acesso',
-            style: AppTextStyles.h2.copyWith(color: AppColors.ink),
+            style: AppTextStyles.h2.copyWith(color: AppColors.white),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -321,21 +265,27 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
     child: Card(
       margin: EdgeInsets.zero,
       elevation: 0,
-      color: Colors.white,
+      color: AppColors.primaryDark,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        title: Text(
-          area,
-          style: AppTextStyles.body.copyWith(
-            color: AppColors.ink,
-            fontWeight: FontWeight.w800,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          iconColor: AppColors.white,
+          collapsedIconColor: AppColors.white,
+          title: Text(
+            area,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w800,
+            ),
           ),
+          subtitle: Text(
+            '${people.length} ${people.length == 1 ? 'pessoa' : 'pessoas'}',
+            style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+          ),
+          children: people.map((person) => _buildPersonTile(person)).toList(),
         ),
-        subtitle: Text(
-          '${people.length} ${people.length == 1 ? 'pessoa' : 'pessoas'}',
-        ),
-        children: people.map((person) => _buildPersonTile(person)).toList(),
       ),
     ),
   );
@@ -343,43 +293,71 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
   Widget _buildPersonTile(PersonRecord person) => ListTile(
     leading: CircleAvatar(
       backgroundColor: person.isActive
-          ? AppColors.primary.withAlpha(24)
-          : AppColors.muted.withAlpha(24),
+          ? AppColors.primary.withAlpha(40)
+          : AppColors.muted.withAlpha(40),
       child: Text(
         _initials(person.name),
-        style: TextStyle(
+        style: AppTextStyles.caption.copyWith(
           color: person.isActive ? AppColors.primary : AppColors.muted,
           fontWeight: FontWeight.w700,
         ),
       ),
     ),
-    title: Text(person.name),
-    subtitle: Text('${person.role}  •  ${person.area}\n${person.email}'),
+    title: Text(
+      person.name,
+      style: AppTextStyles.body.copyWith(
+        color: AppColors.white,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    subtitle: Text(
+      '${person.role}  •  ${person.area}\n${person.email}',
+      style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+    ),
     isThreeLine: true,
     trailing: Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Chip(
           label: Text(person.isActive ? 'Ativo' : 'Inativo'),
-          labelStyle: TextStyle(
+          labelStyle: AppTextStyles.caption.copyWith(
             color: person.isActive ? AppColors.primary : AppColors.muted,
-            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
           backgroundColor: person.isActive
-              ? AppColors.primary.withAlpha(18)
-              : AppColors.muted.withAlpha(18),
+              ? AppColors.primary.withAlpha(35)
+              : AppColors.muted.withAlpha(35),
           side: BorderSide.none,
         ),
         if (_canEdit)
           IconButton(
             tooltip: 'Editar pessoa',
             onPressed: () => _editPerson(person),
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, color: AppColors.white),
           ),
       ],
     ),
   );
+
+  // Decoração padrão dos campos do formulário: fundo transparente
+  // (deixa o fundo do modal aparecer) e borda preta.
+  InputDecoration _formFieldDecoration(String label) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: Colors.black, width: 1.2),
+    );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+      filled: true,
+      fillColor: Colors.transparent,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      ),
+    );
+  }
 
   Future<void> _editPerson(PersonRecord person) async {
     var selectedRole = person.role;
@@ -388,14 +366,23 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('Editar ${person.name}'),
+          backgroundColor: AppColors.primaryDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Editar ${person.name}',
+            style: AppTextStyles.h2.copyWith(color: AppColors.white),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: selectedRole,
-                decoration: const InputDecoration(labelText: 'Cargo'),
+                decoration: _formFieldDecoration('Cargo'),
+                dropdownColor: AppColors.ink,
+                style: AppTextStyles.caption.copyWith(color: AppColors.white),
                 items: _roles
                     .map(
                       (role) =>
@@ -406,10 +393,20 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
                   if (role != null) setDialogState(() => selectedRole = role);
                 },
               ),
+              const SizedBox(height: 14),
               SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Membro ativo'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Colors.black, width: 1.2),
+                ),
+                tileColor: Colors.transparent,
+                title: Text(
+                  'Membro ativo',
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                ),
                 value: isActive,
+                activeThumbColor: AppColors.primary,
                 onChanged: (value) => setDialogState(() => isActive = value),
               ),
             ],
@@ -417,9 +414,16 @@ class _GestaoDePessoasState extends State<GestaoDePessoas> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text(
+                'Cancelar',
+                style: AppTextStyles.button.copyWith(color: AppColors.white),
+              ),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+              ),
               onPressed: () => Navigator.pop(
                 context,
                 person.copyWith(role: selectedRole, isActive: isActive),
@@ -463,13 +467,16 @@ class _RoleChip extends StatelessWidget {
       backgroundColor: canEdit ? AppColors.coral : AppColors.primary,
       child: Text(
         '$level',
-        style: const TextStyle(color: Colors.white, fontSize: 11),
+        style: const TextStyle(color: AppColors.white, fontSize: 11),
       ),
     ),
-    label: Text(role),
+    label: Text(
+      role,
+      style: AppTextStyles.caption.copyWith(color: Colors.black),
+    ),
     side: BorderSide(
       color: canEdit ? AppColors.coral.withAlpha(90) : AppColors.primary.withAlpha(90),
     ),
-    backgroundColor: canEdit ? AppColors.coral.withAlpha(12) : AppColors.primary.withAlpha(12),
+    backgroundColor: canEdit ? AppColors.coral.withAlpha(30) : AppColors.primary.withAlpha(30),
   );
 }

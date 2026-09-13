@@ -30,6 +30,7 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
   List<PersonRecord> _people = [];
   String? _areaFilter;
   String? _statusFilter;
+  Project? _selectedProject; // projeto atualmente exibido
   StreamSubscription<List<Project>>? _projectsSubscription;
   StreamSubscription<List<PersonRecord>>? _peopleSubscription;
 
@@ -48,6 +49,17 @@ class _CadastroDeProjetosState extends State<CadastroDeProjetos> {
     final value = _projectValue(project.value);
     return areaMatches && statusMatches && value >= minimum && value <= maximum;
   }).toList();
+
+  // Garante que sempre exista um projeto válido selecionado dentro
+  // do conjunto atualmente filtrado. Se o selecionado sair da lista
+  // (por causa de um filtro), cai automaticamente para o primeiro.
+  Project? get _displayedProject {
+    final filtered = _filteredProjects;
+    if (filtered.isEmpty) return null;
+    final stillValid = _selectedProject != null &&
+        filtered.any((project) => project.name == _selectedProject!.name);
+    return stillValid ? _selectedProject : filtered.first;
+  }
 
   double _projectValue(String value) =>
       double.tryParse(
@@ -121,6 +133,8 @@ Widget build(BuildContext context) {
                       ),
                       const SizedBox(height: 16),
                       _buildFilters(),
+                      const SizedBox(height: 12),
+                      _buildProjectSelector(),
                       Expanded(
                         child: _filteredProjects.isEmpty
                             ? Center(
@@ -130,14 +144,18 @@ Widget build(BuildContext context) {
                                       : 'Você ainda não participa de nenhum projeto.',
                                 ),
                               )
-                            : ListView.builder(
-                                padding: EdgeInsets.only(
-                                  top: 12,
-                                  bottom: isWide ? 34 : 100,
+                            : Align(
+                                alignment: Alignment.topCenter,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 440),
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      top: 12,
+                                      bottom: isWide ? 34 : 100,
+                                    ),
+                                    child: _buildProjectCard(_displayedProject!),
+                                  ),
                                 ),
-                                itemCount: _filteredProjects.length,
-                                itemBuilder: (context, index) =>
-                                    _buildProjectCard(_filteredProjects[index]),
                               ),
                       ),
                     ],
@@ -149,19 +167,51 @@ Widget build(BuildContext context) {
         ),
       ),
     ),
-    floatingActionButton: _canCreate
-        ? FloatingActionButton.extended(
-            onPressed: _openProjectForm,
-            icon: const Icon(Icons.add),
-            label: const Text('Novo projeto'),
-          )
-        : null,
+    floatingActionButton: _canCreate ? _buildCreateProjectButton() : null,
     bottomNavigationBar: AppBottomNav(
       currentTab: AppTab.projetos,
       profile: widget.currentProfile,
     ),
   );
 }
+
+Widget _buildCreateProjectButton() => Material(
+  color: Colors.transparent,
+  borderRadius: BorderRadius.circular(28),
+  elevation: 4,
+  child: InkWell(
+    borderRadius: BorderRadius.circular(28),
+    onTap: _openProjectForm,
+    child: Ink(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            AppColors.primary,
+            Color.alphaBlend(
+              Colors.black.withValues(alpha: 0.8),
+              AppColors.primary,
+            ),
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.add, color: AppColors.white),
+          const SizedBox(width: 8),
+          Text(
+            'Cadastrar projeto',
+            style: AppTextStyles.button.copyWith(color: AppColors.white),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
 
 Widget _buildFilters() => Theme(
   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -248,7 +298,7 @@ Widget _buildFilters() => Theme(
                 ),
               ],
             ),
-            
+
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -257,6 +307,7 @@ Widget _buildFilters() => Theme(
                   _statusFilter = null;
                   _minimumController.clear();
                   _maximumController.clear();
+                  _selectedProject = null;
                 }),
                 child: Text(
                   'Limpar filtros',
@@ -274,22 +325,203 @@ Widget _buildFilters() => Theme(
   ),
 );
 
+  Widget _buildProjectSelector() {
+    final filtered = _filteredProjects;
+    if (filtered.isEmpty) return const SizedBox.shrink();
+    final selected = _displayedProject;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: 'Projeto',
+          labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+        ),
+        dropdownColor: const Color(0xFF0F142C),
+        style: AppTextStyles.caption.copyWith(color: AppColors.white),
+        initialValue: selected?.name,
+        items: filtered
+            .map(
+              (project) => DropdownMenuItem(
+                value: project.name,
+                child: Text(project.name),
+              ),
+            )
+            .toList(),
+        onChanged: (value) => setState(() {
+          _selectedProject = filtered.firstWhere(
+            (project) => project.name == value,
+            orElse: () => filtered.first,
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildProjectCard(Project project) => Card(
-    child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: project.color.withAlpha(24),
-        child: Icon(Icons.folder_outlined, color: project.color),
+    color: AppColors.primaryDark,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProjectField('Projeto', project.name),
+          _buildProjectField('Gerente', project.manager),
+          _buildProjectField('Área', project.area),
+          _buildProjectField('Valor', project.value),
+          _buildProjectField('Status', project.status),
+          _buildActionsField('Ações', [
+            _buildActionButton(
+              icon: Icons.edit_outlined,
+              color: AppColors.primary,
+              onTap: () {},
+            ),
+            _buildActionButton(
+              icon: Icons.delete_outline,
+              color: AppColors.coral,
+              onTap: () {},
+            ),
+          ]),
+        ],
       ),
-      title: Text(
-        project.name,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        '${project.area} • ${project.status} • ${project.members}',
-      ),
-      trailing: Text(project.value),
     ),
   );
+
+  Widget _buildProjectField(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 88,
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primaryDark, width: 1),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              value,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildActionsField(String label, List<Widget> actions) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 88,
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primaryDark, width: 1),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                actions[i],
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // Botão de ação (editar/excluir): fundo colorido + ícone branco.
+  // Por enquanto os taps não fazem nada (onTap vazio).
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.white, width: 1),
+        ),
+        child: Icon(icon, size: 18, color: AppColors.white),
+      ),
+    ),
+  );
+
+  // Decoração padrão dos campos do formulário: fundo transparente
+  // (deixa o fundo do modal aparecer) e borda preta.
+  InputDecoration _formFieldDecoration(String label) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: Colors.black, width: 1.2),
+    );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+      filled: true,
+      fillColor: Colors.transparent,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      ),
+    );
+  }
 
   Future<void> _openProjectForm() async {
     final nameController = TextEditingController();
@@ -304,6 +536,10 @@ Widget _buildFilters() => Theme(
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppColors.primaryDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) => Padding(
           padding: EdgeInsets.fromLTRB(
@@ -318,22 +554,25 @@ Widget _buildFilters() => Theme(
               children: [
                 Text(
                   'Novo projeto',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: AppTextStyles.h2.copyWith(color: AppColors.white),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome do projeto',
-                  ),
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                  decoration: _formFieldDecoration('Nome do projeto'),
                 ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: clientController,
-                  decoration: const InputDecoration(labelText: 'Cliente'),
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                  decoration: _formFieldDecoration('Cliente'),
                 ),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Área responsável',
-                  ),
+                  decoration: _formFieldDecoration('Área responsável'),
+                  dropdownColor: const Color(0xFF0F142C),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
                   initialValue: area,
                   items: _areas
                       .map(
@@ -343,8 +582,11 @@ Widget _buildFilters() => Theme(
                       .toList(),
                   onChanged: (value) => setSheetState(() => area = value!),
                 ),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Gerente'),
+                  decoration: _formFieldDecoration('Gerente'),
+                  dropdownColor: const Color(0xFF0F142C),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
                   initialValue: managerId.isEmpty ? null : managerId,
                   items: _people
                       .map(
@@ -357,10 +599,18 @@ Widget _buildFilters() => Theme(
                   onChanged: (value) =>
                       setSheetState(() => managerId = value ?? ''),
                 ),
-                const SizedBox(height: 12),
-                const Text('Equipe'),
+                const SizedBox(height: 14),
+                Text(
+                  'Equipe',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: _people
                       .map(
                         (person) => FilterChip(
@@ -373,12 +623,23 @@ Widget _buildFilters() => Theme(
                               selectedMemberIds.remove(person.uid);
                             }
                           }),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: const BorderSide(color: Colors.black, width: 1.2),
+                          ),
+                          backgroundColor: AppColors.primaryDark,
+                          selectedColor: AppColors.primary,
+                          checkmarkColor: AppColors.white,
+                          labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
                         ),
                       )
                       .toList(),
                 ),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Status'),
+                  decoration: _formFieldDecoration('Status'),
+                  dropdownColor: const Color(0xFF0F142C),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
                   initialValue: status,
                   items: _statuses
                       .map(
@@ -388,12 +649,14 @@ Widget _buildFilters() => Theme(
                       .toList(),
                   onChanged: (value) => setSheetState(() => status = value!),
                 ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: valueController,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(labelText: 'Valor'),
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                  decoration: _formFieldDecoration('Valor'),
                 ),
                 const SizedBox(height: 16),
                 if (formError != null)
@@ -401,14 +664,19 @@ Widget _buildFilters() => Theme(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       formError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.coral,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                    ),
                     onPressed: () async {
                       if (nameController.text.trim().isEmpty ||
                           selectedMemberIds.isEmpty) {

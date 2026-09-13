@@ -124,8 +124,6 @@ class _PerfilScreenState extends State<PerfilScreen>{
     }
   }
 
-  // Mesmo padrão de campo usado na tela de login: hintText + prefixIcon,
-  // sem borda própria (usa o InputDecorationTheme do app).
   Widget _field(
     TextEditingController controller,
     String hint,

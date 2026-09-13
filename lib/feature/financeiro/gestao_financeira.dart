@@ -9,11 +9,8 @@ import 'package:flutter/material.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
 
-// Cores auxiliares que não existem no core (app_colors.dart) porque são
-// específicas de indicadores financeiros (positivo/negativo). O resto da
-// tela usa AppColors/AppTextStyles.
 const _green = Color(0xFF6FD8C0);
-const _borderOnDark = Color(0x33FFFFFF); // branco a ~20% sobre fundo escuro
+const _borderOnDark = Color(0x33FFFFFF); 
 
 enum _EntryType { entrada, saida }
 
@@ -178,10 +175,6 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     );
   }
 
-  // Botão flutuante "+ Novo lançamento": mesmo formato de um
-  // FloatingActionButton.extended, mas com o fundo em gradiente
-  // azul (#007FFF) -> preto, da esquerda pra direita — igual ao
-  // botão "+ Cadastrar projeto" da tela de Projetos.
   Widget _buildCreateEntryButton() => Material(
     color: Colors.transparent,
     borderRadius: BorderRadius.circular(28),
@@ -713,8 +706,6 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     onChanged: onChanged,
   );
 
-  // Decoração padrão dos campos do formulário: fundo transparente
-  // (deixa o fundo do modal aparecer) e borda preta.
   InputDecoration _formFieldDecoration(String label, {String? prefixText}) {
     const border = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(10)),

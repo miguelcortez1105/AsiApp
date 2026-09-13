@@ -267,14 +267,14 @@ Widget build(BuildContext context) {
             'H O M E',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.white,
-              letterSpacing: 4.0, // Espaçamento largo igual ao do print
+              letterSpacing: 4.0, 
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Bem vindo, ${_profile.name.split(' ').first}!', // Aspas adicionadas
+            'Bem vindo, ${_profile.name.split(' ').first}!', 
             style: AppTextStyles.h2.copyWith(
-              color: AppColors.white, // Fonte em destaque
+              color: AppColors.white, 
             ),
             textAlign: TextAlign.center,
           ),
@@ -307,7 +307,7 @@ Widget build(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.center, 
           children: [
             Container(
-              width: 42, // Tamanho do ícone um pouco maior
+              width: 42, 
               height: 42, 
               child: SvgPicture.asset('assets/images/icon_home.svg'),
             ),
@@ -537,7 +537,7 @@ class _KpiCard extends StatelessWidget {
         Container(
           height: 70,
           decoration: BoxDecoration(
-            color: AppColors.primaryDark, // Utilizando a cor escura do tema
+            color: AppColors.primaryDark, 
             borderRadius: BorderRadius.circular(12),
           ),
           child: Stack(
@@ -546,7 +546,7 @@ class _KpiCard extends StatelessWidget {
                 widthFactor: data.progress.clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.primary, // Cor principal do tema
+                    color: AppColors.primary, 
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -744,8 +744,8 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.primary, // Cor azul vibrante
-      borderRadius: BorderRadius.circular(24), // Bordas mais arredondadas como no print
+      color: AppColors.primary, 
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -761,8 +761,7 @@ class _ProjectCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Gerente jogado bem pra direita, já que o número de
-            // pessoas saiu dessa linha e desceu pra linha de baixo.
+            
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -789,8 +788,7 @@ class _ProjectCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        // Número de pessoas do projeto, agora numa linha própria
-        // abaixo do cabeçalho, liberando espaço ali em cima.
+        
         Row(
           children: [
             const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
@@ -805,40 +803,21 @@ class _ProjectCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          'Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentes que sem placerat. In id cursus mi pretium tellus duis convallis.',
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.white.withOpacity(0.9),
-            height: 1.5,
-          ),
+        Row(
+          children: [
+            const Icon(Icons.folder_outlined, size: 16, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              'Área: ${project.area}',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.white.withOpacity(0.9),
+              ),
+            ),
+          ],
         ),
       ],
     ),
   );
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-  final String status;
-  
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        status,
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 }
 
 class _Surface extends StatelessWidget {
@@ -851,7 +830,7 @@ class _Surface extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding ?? const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.ink, // Trocado para o azul muito escuro do seu tema
+      color: AppColors.ink, 
       borderRadius: BorderRadius.circular(16),
     ),
     child: child,

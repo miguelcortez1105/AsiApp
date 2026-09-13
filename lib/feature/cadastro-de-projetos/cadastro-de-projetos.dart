@@ -11,10 +11,6 @@ import '../home/home_page.dart';
 import '../pessoas/gestao_de_pessoas.dart';
 import '../perfil/perfil_screen.dart';
 
-// Decoração padrão dos campos do formulário: fundo transparente
-// (deixa o fundo do modal aparecer) e borda preta. Função de nível
-// de arquivo porque é usada por _NewProjectSheet (o formulário, que
-// agora é seu próprio widget, separado de CadastroDeProjetos).
 InputDecoration _formFieldDecoration(String label) {
   const border = OutlineInputBorder(
     borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -547,10 +543,6 @@ Widget _buildFilters() => Theme(
   }
 }
 
-// Formulário extraído para seu próprio StatefulWidget (fix do develop
-// pro ciclo de vida do modal — antes era um StatefulBuilder dentro do
-// showModalBottomSheet). Estilização (bordas pretas, fundo transparente,
-// chips e botão) reaplicada em cima dessa estrutura nova.
 class _NewProjectSheet extends StatefulWidget {
   const _NewProjectSheet({
     required this.currentProfile,

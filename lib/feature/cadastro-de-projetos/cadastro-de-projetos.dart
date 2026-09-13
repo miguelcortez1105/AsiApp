@@ -11,6 +11,28 @@ import '../home/home_page.dart';
 import '../pessoas/gestao_de_pessoas.dart';
 import '../perfil/perfil_screen.dart';
 
+// Decoração padrão dos campos do formulário: fundo transparente
+// (deixa o fundo do modal aparecer) e borda preta. Função de nível
+// de arquivo porque é usada por _NewProjectSheet (o formulário, que
+// agora é seu próprio widget, separado de CadastroDeProjetos).
+InputDecoration _formFieldDecoration(String label) {
+  const border = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(10)),
+    borderSide: BorderSide(color: Colors.black, width: 1.2),
+  );
+  return InputDecoration(
+    labelText: label,
+    labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+    filled: true,
+    fillColor: Colors.transparent,
+    border: border,
+    enabledBorder: border,
+    focusedBorder: border.copyWith(
+      borderSide: const BorderSide(color: Colors.black, width: 1.6),
+    ),
+  );
+}
+
 class CadastroDeProjetos extends StatefulWidget {
   const CadastroDeProjetos({super.key, required this.currentProfile});
 
@@ -448,7 +470,7 @@ Widget _buildFilters() => Theme(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
-              
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.primaryDark, width: 1),
             ),
@@ -458,8 +480,8 @@ Widget _buildFilters() => Theme(
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.body.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w400,
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -503,36 +525,7 @@ Widget _buildFilters() => Theme(
     ),
   );
 
-  // Decoração padrão dos campos do formulário: fundo transparente
-  // (deixa o fundo do modal aparecer) e borda preta.
-  InputDecoration _formFieldDecoration(String label) {
-    const border = OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(10)),
-      borderSide: BorderSide(color: Colors.black, width: 1.2),
-    );
-    return InputDecoration(
-      labelText: label,
-      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
-      filled: true,
-      fillColor: Colors.transparent,
-      border: border,
-      enabledBorder: border,
-      focusedBorder: border.copyWith(
-        borderSide: const BorderSide(color: Colors.black, width: 1.6),
-      ),
-    );
-  }
-
   Future<void> _openProjectForm() async {
-    final nameController = TextEditingController();
-    final clientController = TextEditingController();
-    final valueController = TextEditingController();
-    var area = _areas.first;
-    var managerId = '';
-    var status = _statuses.first;
-    String? formError;
-    final selectedMemberIds = <String>{widget.currentProfile.uid};
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -540,215 +533,267 @@ Widget _buildFilters() => Theme(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.viewInsetsOf(context).bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Novo projeto',
-                  style: AppTextStyles.h2.copyWith(color: AppColors.white),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameController,
-                  style: AppTextStyles.body.copyWith(color: AppColors.white),
-                  decoration: _formFieldDecoration('Nome do projeto'),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: clientController,
-                  style: AppTextStyles.body.copyWith(color: AppColors.white),
-                  decoration: _formFieldDecoration('Cliente'),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  decoration: _formFieldDecoration('Área responsável'),
-                  dropdownColor: const Color(0xFF0F142C),
-                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
-                  initialValue: area,
-                  items: _areas
-                      .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setSheetState(() => area = value!),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  decoration: _formFieldDecoration('Gerente'),
-                  dropdownColor: const Color(0xFF0F142C),
-                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
-                  initialValue: managerId.isEmpty ? null : managerId,
-                  items: _people
-                      .map(
-                        (person) => DropdownMenuItem(
-                          value: person.uid,
-                          child: Text(person.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setSheetState(() => managerId = value ?? ''),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Equipe',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.white,
+      builder: (_) => _NewProjectSheet(
+        currentProfile: widget.currentProfile,
+        initialArea: _areas.first,
+        initialManagerId: '',
+        initialStatus: _statuses.first,
+        initialSelectedMemberIds: {widget.currentProfile.uid},
+        people: _people,
+        areas: _areas,
+        statuses: _statuses,
+      ),
+    );
+  }
+}
+
+// Formulário extraído para seu próprio StatefulWidget (fix do develop
+// pro ciclo de vida do modal — antes era um StatefulBuilder dentro do
+// showModalBottomSheet). Estilização (bordas pretas, fundo transparente,
+// chips e botão) reaplicada em cima dessa estrutura nova.
+class _NewProjectSheet extends StatefulWidget {
+  const _NewProjectSheet({
+    required this.currentProfile,
+    required this.initialArea,
+    required this.initialManagerId,
+    required this.initialStatus,
+    required this.initialSelectedMemberIds,
+    required this.people,
+    required this.areas,
+    required this.statuses,
+  });
+
+  final UserProfile currentProfile;
+  final String initialArea;
+  final String initialManagerId;
+  final String initialStatus;
+  final Set<String> initialSelectedMemberIds;
+  final List<PersonRecord> people;
+  final List<String> areas;
+  final List<String> statuses;
+
+  @override
+  State<_NewProjectSheet> createState() => _NewProjectSheetState();
+}
+
+class _NewProjectSheetState extends State<_NewProjectSheet> {
+  late final TextEditingController _nameController = TextEditingController();
+  late final TextEditingController _clientController = TextEditingController();
+  late final TextEditingController _valueController = TextEditingController();
+
+  late String _area = widget.initialArea;
+  late String _managerId = widget.initialManagerId;
+  late String _status = widget.initialStatus;
+  late final Set<String> _selectedMemberIds =
+      Set<String>.from(widget.initialSelectedMemberIds);
+  String? _formError;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _clientController.dispose();
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_nameController.text.trim().isEmpty || _selectedMemberIds.isEmpty) {
+      setState(
+        () => _formError = 'Informe o nome e selecione ao menos uma pessoa.',
+      );
+      return;
+    }
+
+    PersonRecord? manager;
+    for (final person in widget.people) {
+      if (person.uid == _managerId) {
+        manager = person;
+        break;
+      }
+    }
+
+    final value =
+        double.tryParse(_valueController.text.replaceAll(',', '.')) ?? 0;
+
+    try {
+      await FirebaseRepository.instance.saveProject(
+        data: {
+          'name': _nameController.text.trim(),
+          'client': _clientController.text.trim(),
+          'area': _area,
+          'manager': manager?.name ?? widget.currentProfile.name,
+          'managerId': _managerId.isEmpty ? widget.currentProfile.uid : _managerId,
+          'memberIds': _selectedMemberIds.toList(),
+          'members': '${_selectedMemberIds.length} pessoas',
+          'value': 'R\$ ${value.toStringAsFixed(2)}',
+          'progress': 0,
+          'status': _status,
+          'color': '087E8B',
+          'createdBy': widget.currentProfile.uid,
+        },
+      );
+
+      if (!mounted) return;
+
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      FocusScope.of(context).unfocus();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      if (messenger != null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Projeto cadastrado com sucesso.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _formError =
+            'Não foi possível cadastrar o projeto. Verifique sua permissão e tente novamente.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        20,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Novo projeto',
+              style: AppTextStyles.h2.copyWith(color: AppColors.white),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _nameController,
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+              decoration: _formFieldDecoration('Nome do projeto'),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _clientController,
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+              decoration: _formFieldDecoration('Cliente'),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              decoration: _formFieldDecoration('Área responsável'),
+              dropdownColor: const Color(0xFF0F142C),
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
+              initialValue: _area,
+              items: widget.areas
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _area = value!),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              decoration: _formFieldDecoration('Gerente'),
+              dropdownColor: const Color(0xFF0F142C),
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
+              initialValue: _managerId.isEmpty ? null : _managerId,
+              items: widget.people
+                  .map(
+                    (person) => DropdownMenuItem(
+                      value: person.uid,
+                      child: Text(person.name),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _managerId = value ?? ''),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Equipe',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: widget.people
+                  .map(
+                    (person) => FilterChip(
+                      label: Text(person.name),
+                      selected: _selectedMemberIds.contains(person.uid),
+                      onSelected: (selected) => setState(() {
+                        if (selected) {
+                          _selectedMemberIds.add(person.uid);
+                        } else {
+                          _selectedMemberIds.remove(person.uid);
+                        }
+                      }),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Colors.black, width: 1.2),
+                      ),
+                      backgroundColor: AppColors.primaryDark,
+                      selectedColor: AppColors.primary,
+                      checkmarkColor: AppColors.white,
+                      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              decoration: _formFieldDecoration('Status'),
+              dropdownColor: const Color(0xFF0F142C),
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
+              initialValue: _status,
+              items: widget.statuses
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _status = value!),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _valueController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+              decoration: _formFieldDecoration('Valor'),
+            ),
+            const SizedBox(height: 16),
+            if (_formError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _formError!,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.coral,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _people
-                      .map(
-                        (person) => FilterChip(
-                          label: Text(person.name),
-                          selected: selectedMemberIds.contains(person.uid),
-                          onSelected: (selected) => setSheetState(() {
-                            if (selected) {
-                              selectedMemberIds.add(person.uid);
-                            } else {
-                              selectedMemberIds.remove(person.uid);
-                            }
-                          }),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: Colors.black, width: 1.2),
-                          ),
-                          backgroundColor: AppColors.primaryDark,
-                          selectedColor: AppColors.primary,
-                          checkmarkColor: AppColors.white,
-                          labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
-                        ),
-                      )
-                      .toList(),
+              ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
                 ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  decoration: _formFieldDecoration('Status'),
-                  dropdownColor: const Color(0xFF0F142C),
-                  style: AppTextStyles.caption.copyWith(color: AppColors.white),
-                  initialValue: status,
-                  items: _statuses
-                      .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setSheetState(() => status = value!),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: valueController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: AppTextStyles.body.copyWith(color: AppColors.white),
-                  decoration: _formFieldDecoration('Valor'),
-                ),
-                const SizedBox(height: 16),
-                if (formError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      formError!,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.coral,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                    ),
-                    onPressed: () async {
-                      if (nameController.text.trim().isEmpty ||
-                          selectedMemberIds.isEmpty) {
-                        setSheetState(
-                          () => formError =
-                              'Informe o nome e selecione ao menos uma pessoa.',
-                        );
-                        return;
-                      }
-                      PersonRecord? manager;
-                      for (final person in _people) {
-                        if (person.uid == managerId) manager = person;
-                      }
-                      final value =
-                          double.tryParse(
-                            valueController.text.replaceAll(',', '.'),
-                          ) ??
-                          0;
-                      try {
-                        await FirebaseRepository.instance.saveProject(
-                          data: {
-                            'name': nameController.text.trim(),
-                            'client': clientController.text.trim(),
-                            'area': area,
-                            'manager':
-                                manager?.name ?? widget.currentProfile.name,
-                            'managerId': managerId.isEmpty
-                                ? widget.currentProfile.uid
-                                : managerId,
-                            'memberIds': selectedMemberIds.toList(),
-                            'members': '${selectedMemberIds.length} pessoas',
-                            'value': 'R\$ ${value.toStringAsFixed(2)}',
-                            'progress': 0,
-                            'status': status,
-                            'color': '087E8B',
-                            'createdBy': widget.currentProfile.uid,
-                          },
-                        );
-                        if (sheetContext.mounted)
-                        {
-                          FocusScope.of(sheetContext).unfocus(); 
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (sheetContext.mounted) Navigator.pop(sheetContext);
-                          });
-                        }
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Projeto cadastrado com sucesso.'),
-                            ),
-                          );
-                        }
-                      } catch (_) {
-                        if (sheetContext.mounted) {
-                          setSheetState(
-                            () => formError =
-                                'Não foi possível cadastrar o projeto. Verifique sua permissão e tente novamente.',
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Cadastrar projeto'),
-                  ),
-                ),
-              ],
+                onPressed: _submit,
+                child: const Text('Cadastrar projeto'),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
-    nameController.dispose();
-    clientController.dispose();
-    valueController.dispose();
   }
 }

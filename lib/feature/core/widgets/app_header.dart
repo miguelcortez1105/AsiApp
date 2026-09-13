@@ -8,12 +8,14 @@ class ScreenHeader extends StatelessWidget {
     required this.tela,
     required this.title,
     this.subtitle,
+    this.textAlign = TextAlign.center,
   });
 
 
   final String tela;
   final String title;
   final String? subtitle;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -22,17 +24,20 @@ class ScreenHeader extends StatelessWidget {
       Text(
         tela,
         style: AppTextStyles.caption.copyWith(color: AppColors.white),
+        textAlign: TextAlign.center,
       ),
       const SizedBox(height: 6),
       Text(
         title,
         style: AppTextStyles.h2.copyWith(color: AppColors.white),
+        textAlign: TextAlign.center,
       ),
       if (subtitle != null) ...[
         const SizedBox(height: 6),
         Text(
           subtitle!,
           style: AppTextStyles.h3.copyWith(color: AppColors.white),
+          textAlign: TextAlign.center,
         ),
       ],
     ],

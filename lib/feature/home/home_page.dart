@@ -10,6 +10,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'models/dashboard_metrics.dart';
 
 const _ink = Color(0xFF17212B);
 const _muted = Color(0xFF6E7A86);
@@ -133,10 +135,78 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _selectedArea = 'Todas';
+
   late UserProfile _profile = widget.profile;
+
   late List<Project> _projects =
-      Hierarchy.canManageProjects(widget.profile.role) ? projects : [];
+      Hierarchy.canManageProjects(widget.profile.role)
+       ? projects 
+       : [];
+
   StreamSubscription<List<Project>>? _projectsSubscription;
+
+  StreamSubscription<DashboardMetrics?>? _dashboardSubscription;
+
+  StreamSubscription<List<PortalBjIndicator>>? _portalBjSubscription;
+
+  DashboardMetrics? _dashboardMetrics;
+
+  List<PortalBjIndicator> _portalBjIndicators = [];
+
+  double get _percentualMeta {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null || metrics.annualGoal <= 0) {
+    return 0;
+  }
+
+  return ((metrics.currentRevenue / metrics.annualGoal) * 100)
+      .clamp(0, 100);
+}
+
+double get _gapMeta {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null) {
+    return 0;
+  }
+
+  return (metrics.annualGoal - metrics.currentRevenue)
+      .clamp(0, double.infinity);
+}
+
+double get _variacaoAnual {
+  final metrics = _dashboardMetrics;
+
+  if (metrics == null || metrics.previousYearRevenue <= 0) {
+    return 0;
+  }
+
+  return ((metrics.currentRevenue -
+              metrics.previousYearRevenue) /
+          metrics.previousYearRevenue) *
+      100;
+}
+
+String _formatCurrency(double value) {
+  return NumberFormat.currency(
+    locale: 'pt_BR',
+    symbol: 'R\$',
+  ).format(value);
+}
+
+String _formatPortalBjValue(PortalBjIndicator indicator) {
+  switch (indicator.unit.toLowerCase()) {
+    case 'moeda':
+      return _formatCurrency(indicator.achieved);
+
+    case 'percentual':
+      return '${indicator.achieved.toStringAsFixed(1)}%';
+
+    default:
+      return indicator.achieved.toStringAsFixed(2);
+  }
+}
 
   @override
   void initState() {
@@ -153,11 +223,44 @@ class _HomePageState extends State<HomePage> {
       },
       onError: (_) {},
     );
+
+  final anoAtual = DateTime.now().year;
+
+  _dashboardSubscription =
+      FirebaseRepository.instance
+          .watchDashboardMetrics(anoAtual)
+          .listen(
+    (metrics) {
+      if (mounted) {
+        setState(() {
+          _dashboardMetrics = metrics;
+        });
+      }
+    },
+    onError: (_) {},
+  );
+
+  _portalBjSubscription =
+      FirebaseRepository.instance
+          .watchPortalBjIndicators(anoAtual)
+          .listen(
+    (indicators) {
+      if (mounted) {
+        setState(() {
+          _portalBjIndicators = indicators;
+        });
+      }
+    },
+    onError: (_) {},
+  );
   }
 
   @override
   void dispose() {
     _projectsSubscription?.cancel();
+    _dashboardSubscription?.cancel();
+    _portalBjSubscription?.cancel();
+
     super.dispose();
   }
 @override
@@ -193,9 +296,7 @@ Widget build(BuildContext context) {
                       _buildKpis(isWide),
                       _buildGoalSection(isWide),
                       const SizedBox(height: 16),
-                      _buildProjectHeader(),
-                      const SizedBox(height: 16),
-                      _buildProjects(filteredProjects, isWide),
+                      _buildProjectsSection(filteredProjects, isWide),
                     ],
                   ),
                 ),
@@ -212,17 +313,43 @@ Widget build(BuildContext context) {
   );
 }
 
-  Widget _buildHeader(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHeader(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Expanded(
-        child: ScreenHeader(
-          tela: 'H O M E',
-          title: 'Bem vindo, ${_profile.name.split(' ').first}!',
-          subtitle: 'Acompanhe os processos da empresa hoje',
-        ),
+      Align(
+        alignment: Alignment.topLeft,
+        child: _buildProfileButton(context),
       ),
-      _buildProfileButton(context),
+      const SizedBox(height: 24), // Espaçamento entre o botão e o texto central
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'H O M E',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.white,
+              letterSpacing: 4.0, // Espaçamento largo igual ao do print
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Bem vindo, “${_profile.name.split(' ').first}”!', // Aspas adicionadas
+            style: AppTextStyles.display.copyWith(
+              color: AppColors.white,
+              fontSize: 28, // Fonte em destaque
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Acompanhe os processos da empresa hoje',
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.white.withOpacity(0.9),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     ],
   );
 
@@ -234,16 +361,20 @@ Widget build(BuildContext context) {
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center, 
           children: [
             Container(
-              width: 32,
-              height: 32, 
+              width: 42, // Tamanho do ícone um pouco maior
+              height: 42, 
               child: SvgPicture.asset('assets/images/icon_home.svg'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(height: 4), 
             Text(
               'AsiPerfil',
-              style: AppTextStyles.caption.copyWith(color: AppColors.white),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -261,322 +392,418 @@ Widget build(BuildContext context) {
   }
 
   Widget _buildKpis(bool isWide) {
+    final currentRevenue = _dashboardMetrics?.currentRevenue ?? 0;
+    final annualGoal = _dashboardMetrics?.annualGoal ?? 0;
+
     final cards = [
       _KpiData(
-        'Faturamento acumulado',
-        'R\$ 8,42 mi',
-        '92,5% da meta anual',
-        Icons.trending_up_rounded,
-        _teal,
-        '+12,8% vs. 2025',
+        title: 'Faturamento',
+        achievedValue: _formatCurrency(currentRevenue),
+        goalValue: _formatCurrency(annualGoal),
+        progress: annualGoal > 0 ? (currentRevenue / annualGoal) : 0,
+        leftFooter: 'GAP ${_formatCurrency(_gapMeta)}',
+        rightFooter: '${_percentualMeta.toStringAsFixed(0)}% da meta atual',
       ),
       _KpiData(
-        'Meta anual',
-        'R\$ 9,10 mi',
-        'R\$ 680 mil restantes',
-        Icons.flag_outlined,
-        _coral,
-        'Dezembro de 2026',
+        title: 'Faturamento acumulado',
+        achievedValue: _formatCurrency(currentRevenue),
+        progress: 1.0, 
+        centerFooter: '${_variacaoAnual >= 0 ? '+' : ''}${_variacaoAnual.toStringAsFixed(1)}% vs ${_dashboardMetrics?.previousYearRevenue != null ? DateTime.now().year - 1 : "ano anterior"}',
       ),
       _KpiData(
-        'Projetos ativos',
-        '${_projects.length}',
-        '${_projects.map((project) => project.area).toSet().length} áreas de projetos',
-        Icons.layers_outlined,
-        const Color(0xFF4C6FFF),
-        '3 em atenção',
+        title: 'Meta anual',
+        achievedValue: _formatCurrency(annualGoal),
+        progress: 1.0,
+        centerFooter: 'Faltam ${_formatCurrency(_gapMeta)}',
+      ),
+      _KpiData(
+        title: 'Projetos',
+        achievedLabel: 'Ativos',
+        achievedValue: '${_projects.length}',
+        progress: 1.0,
+        centerFooter: '${_projects.length} áreas de projetos ativas',
       ),
     ];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: cards.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: isWide ? 3 : 1,
+        crossAxisCount: isWide ? 2 : 1, 
         crossAxisSpacing: 16,
-        mainAxisSpacing: 12,
-        mainAxisExtent: 155,
+        mainAxisSpacing: 16,
+        mainAxisExtent: 190, 
       ),
       itemBuilder: (context, index) => _KpiCard(data: cards[index]),
     );
   }
 
   Widget _buildGoalSection(bool isWide) => _Surface(
-    child: isWide
-        ? Row(
-            children: [
-              _buildGoalCopy(),
-              Expanded(child: _buildProgressBars()),
-            ],
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildGoalCopy(),
-              
-              _buildProgressBars(),
-            ],
-          ),
-  );
-
-  Widget _buildGoalCopy() => SizedBox(
-    width: 245,
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Portal BJ',
-          style: AppTextStyles.caption.copyWith(color: AppColors.black),
+        Center(
+          child: Text(
+            'Portal BJ',
+            style: AppTextStyles.h2.copyWith(color: AppColors.white),
+          ),
         ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLegendItem(const Color(0xFF76C86F), 'Indicadores\nEssenciais'),
+            const SizedBox(width: 32),
+            _buildLegendItem(AppColors.primary, 'Indicadores\nComplementares'),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildProgressBars(),
       ],
     ),
   );
 
-  Widget _buildProgressBars() => Column(
+  Widget _buildLegendItem(Color color, String label) => Row(
     children: [
-      _ProgressLine(
-        label: 'CSAT',
-        value: .925,
-        amount: '92,5%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Tempo de Permanencia no MEJ',
-        value: .68,
-        amount: '68%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Engajamento com o  MEJ',
-        value: .81,
-        amount: '81%',
-        color: const Color(0xFF88D46C),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Politicas de Diversidade e Inclusão',
-        value: .925,
-        amount: '92,5%',
-        color: const Color(0xFF007FFF),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Faturamento Colaborativo',
-        value: .68,
-        amount: '68%',
-        color: const Color(0xFF007FFF),
-      ),
-      const SizedBox(height: 8),
-      _ProgressLine(
-        label: 'Projetos de Impacto',
-        value: .81,
-        amount: '81%',
-        color: const Color(0xFF007FFF)
-      ),
-    ],
-  );
-
-  Widget _buildProjectHeader() => Row(
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Projetos atuais',
-              style: AppTextStyles.h2.copyWith(color: AppColors.white),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Visão rápida por área, andamento e responsáveis.',
-              style: AppTextStyles.caption.copyWith(color: AppColors.white),
-            ),
-          ],
+      Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
-      PopupMenuButton<String>(
-        initialValue: _selectedArea,
-        onSelected: (value) => setState(() => _selectedArea = value),
-        tooltip: 'Filtrar por área',
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            border: Border.all(color: _line),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _selectedArea,
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.tune_rounded, size: 16, color: _muted),
-            ],
-          ),
-        ),
-        itemBuilder: (context) => [
-          'Todas',
-          'Mobile',
-          'Desktop',
-          'Dados',
-          'Sites',
-          'Pessoas',
-        ].map((area) => PopupMenuItem(value: area, child: Text(area))).toList(),
-      ),
-    ],
-  );
-
-  Widget _buildProjects(List<Project> projects, bool isWide) {
-    if (projects.isEmpty) {
-      return Text(
-        'Nenhum projeto encontrado.',
+      const SizedBox(width: 8),
+      Text(
+        label, 
         style: AppTextStyles.caption.copyWith(color: AppColors.white),
+      ),
+    ],
+  );
+
+  Widget _buildProgressBars() {
+    if (_portalBjIndicators.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Nenhum indicador encontrado.',
+            style: AppTextStyles.body.copyWith(color: AppColors.muted),
+          ),
+        ),
       );
     }
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: projects.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: isWide ? 2 : 1,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: isWide ? 2.15 : 2.0,
-      ),
-      itemBuilder: (context, index) => _ProjectCard(project: projects[index]),
+
+    return Column(
+      children: _portalBjIndicators.map((indicator) {
+        final isEssential = indicator.type.toLowerCase() == 'essencial';
+        
+        // Verde customizado e os Azuis baseados no AppColors
+        final cardColor = isEssential ? const Color(0xFF76C86F) : AppColors.primary;
+        final trackColor = isEssential ? const Color(0xFF5FA85A) : AppColors.primaryDark;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _PortalBjCard(
+            title: indicator.name,
+            achieved: _formatPortalBjValue(indicator),
+            progress: indicator.progress / 100,
+            cardColor: cardColor,
+            trackColor: trackColor,
+          ),
+        );
+      }).toList(),
     );
   }
+
+  Widget _buildProjectsSection(List<Project> projects, bool isWide) => _Surface(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Text(
+            'Projetos',
+            style: AppTextStyles.display.copyWith(
+              color: AppColors.white,
+              fontSize: 28,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        if (projects.isEmpty)
+          Center(
+            child: Text(
+              'Nenhum projeto encontrado.',
+              style: AppTextStyles.caption.copyWith(color: AppColors.white),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: projects.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) => _ProjectCard(project: projects[index]),
+          ),
+      ],
+    ),
+  );
 }
 
 class _KpiData {
-  const _KpiData(
-    this.label,
-    this.value,
-    this.detail,
-    this.icon,
-    this.color,
-    this.footer,
-  );
-  final String label;
-  final String value;
-  final String detail;
-  final IconData icon;
-  final Color color;
-  final String footer;
+  const _KpiData({
+    required this.title,
+    this.achievedLabel = 'Alcançado',
+    required this.achievedValue,
+    this.goalValue,
+    required this.progress,
+    this.leftFooter,
+    this.rightFooter,
+    this.centerFooter,
+  });
+  final String title;
+  final String achievedLabel;
+  final String achievedValue;
+  final String? goalValue;
+  final double progress;
+  final String? leftFooter;
+  final String? rightFooter;
+  final String? centerFooter;
 }
 
 class _KpiCard extends StatelessWidget {
   const _KpiCard({required this.data});
   final _KpiData data;
+
   @override
   Widget build(BuildContext context) => _Surface(
+    padding: const EdgeInsets.all(16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: data.color.withAlpha(24),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(data.icon, color: data.color, size: 18),
-            ),
-            const Spacer(),
-            Text(
-              data.footer,
-              style: TextStyle(
-                color: data.color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Text(data.label, style: const TextStyle(color: _muted, fontSize: 12)),
-        const SizedBox(height: 3),
         Text(
-          data.value,
-          style: const TextStyle(
-            color: _ink,
-            fontSize: 25,
-            fontWeight: FontWeight.w800,
+          data.title, 
+          style: AppTextStyles.body.copyWith(
+            color: AppColors.white, 
+            fontWeight: FontWeight.w600,
+          )
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 70,
+          decoration: BoxDecoration(
+            color: AppColors.primaryDark, // Utilizando a cor escura do tema
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: data.progress.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary, // Cor principal do tema
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: data.goalValue != null 
+                      ? MainAxisAlignment.spaceBetween 
+                      : MainAxisAlignment.center,
+                  children: [
+                    Column(
+                      crossAxisAlignment: data.goalValue != null 
+                          ? CrossAxisAlignment.start 
+                          : CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          data.achievedLabel, 
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.white.withOpacity(0.9), 
+                            fontWeight: FontWeight.w500,
+                          )
+                        ),
+                        Text(
+                          data.achievedValue, 
+                          style: AppTextStyles.h2.copyWith(
+                            color: AppColors.white, 
+                          )
+                        ),
+                      ],
+                    ),
+                    if (data.goalValue != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Meta', 
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.white.withOpacity(0.9), 
+                              fontWeight: FontWeight.w500,
+                            )
+                          ),
+                          Text(
+                            data.goalValue!, 
+                            style: AppTextStyles.button.copyWith(
+                              color: AppColors.white, 
+                            )
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 3),
-        Text(data.detail, style: const TextStyle(color: _muted, fontSize: 11)),
+        const SizedBox(height: 12),
+        if (data.centerFooter != null)
+          Center(
+            child: Text(
+              data.centerFooter!, 
+              style: AppTextStyles.button.copyWith(
+                color: AppColors.primary, 
+              )
+            ),
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (data.leftFooter != null) 
+                Text(
+                  data.leftFooter!, 
+                  style: AppTextStyles.caption.copyWith(color: AppColors.muted)
+                ),
+              if (data.rightFooter != null) 
+                Text(
+                  data.rightFooter!, 
+                  style: AppTextStyles.caption.copyWith(color: AppColors.muted)
+                ),
+            ],
+          ),
       ],
     ),
   );
 }
 
-class _ProgressLine extends StatelessWidget {
-  const _ProgressLine({
-    required this.label,
-    required this.value,
-    required this.amount,
-    required this.color,
+class _PortalBjCard extends StatelessWidget {
+  const _PortalBjCard({
+    required this.title,
+    required this.achieved,
+    required this.progress,
+    required this.cardColor,
+    required this.trackColor,
   });
-  final String label;
-  final double value;
-  final String amount;
-  final Color color;
+  
+  final String title;
+  final String achieved;
+  final double progress;
+  final Color cardColor;
+  final Color trackColor;
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            amount,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: value,
-          minHeight: 8,
-          backgroundColor: _line,
-          color: color,
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.button.copyWith(color: AppColors.white),
         ),
-      ),
-    ],
+        const SizedBox(height: 12),
+        Container(
+          height: 56, 
+          decoration: BoxDecoration(
+            color: trackColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Alcançado', 
+                          style: AppTextStyles.caption.copyWith(color: AppColors.white, fontSize: 10)
+                        ),
+                        Text(
+                          achieved, 
+                          style: AppTextStyles.button.copyWith(color: AppColors.white)
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Meta', 
+                          style: AppTextStyles.caption.copyWith(color: AppColors.white, fontSize: 10)
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 1,
+          color: AppColors.white.withOpacity(0.4),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'GAP R\$ 0,00', 
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.white, 
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
   );
 }
 
 class _ProjectCard extends StatelessWidget {
   const _ProjectCard({required this.project});
   final Project project;
+
   @override
-  Widget build(BuildContext context) => _Surface(
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppColors.primary, // Cor azul vibrante
+      borderRadius: BorderRadius.circular(24), // Bordas mais arredondadas como no print
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -585,83 +812,58 @@ class _ProjectCard extends StatelessWidget {
             Expanded(
               child: Text(
                 project.name,
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                style: AppTextStyles.h2.copyWith(
+                  color: AppColors.white,
+                  fontSize: 20,
                 ),
               ),
             ),
-            _StatusPill(status: project.status),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_outline_rounded, size: 16, color: AppColors.ink),
+                  const SizedBox(width: 6),
+                  Text(
+                    project.manager,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_up_rounded, size: 16, color: AppColors.ink),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Row(
+              children: [
+                const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
+                const SizedBox(width: 6),
+                Text(
+                  project.members.replaceAll(RegExp(r'[^0-9]'), ''), 
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 16),
         Text(
-          project.area,
-          style: TextStyle(
-            color: project.color,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
+          'Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentes que sem placerat. In id cursus mi pretium tellus duis convallis.',
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.white.withOpacity(0.9),
+            height: 1.5,
           ),
-        ),
-        const Spacer(),
-        Row(
-          children: [
-            const Icon(Icons.person_outline_rounded, size: 15, color: _muted),
-            const SizedBox(width: 5),
-            Text(
-              project.manager,
-              style: const TextStyle(color: _muted, fontSize: 11),
-            ),
-            const Spacer(),
-            Text(
-              project.members,
-              style: const TextStyle(color: _muted, fontSize: 11),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: project.progress,
-                  minHeight: 6,
-                  backgroundColor: _line,
-                  color: project.color,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '${(project.progress * 100).round()}%',
-              style: const TextStyle(
-                color: _ink,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            const Text(
-              'Orçamento',
-              style: TextStyle(color: _muted, fontSize: 11),
-            ),
-            const Spacer(),
-            Text(
-              project.value,
-              style: const TextStyle(
-                color: _ink,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
         ),
       ],
     ),
@@ -671,25 +873,21 @@ class _ProjectCard extends StatelessWidget {
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
   final String status;
+  
   @override
   Widget build(BuildContext context) {
-    final color = status == 'No prazo'
-        ? _teal
-        : status == 'Atenção'
-        ? _coral
-        : const Color(0xFFD1495B);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withAlpha(20),
+        color: AppColors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         status,
-        style: TextStyle(
-          color: color,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.white,
           fontSize: 10,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -697,15 +895,17 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _Surface extends StatelessWidget {
-  const _Surface({required this.child});
+  const _Surface({required this.child, this.padding});
+  
   final Widget child;
+  final EdgeInsetsGeometry? padding;
+  
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
+    padding: padding ?? const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _line),
+      color: AppColors.ink, // Trocado para o azul muito escuro do seu tema
+      borderRadius: BorderRadius.circular(16),
     ),
     child: child,
   );

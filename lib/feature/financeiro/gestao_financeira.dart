@@ -2,19 +2,18 @@ import 'dart:async';
 import 'package:asiapp_mobile/feature/core/widgets/app_background.dart';
 import 'package:asiapp_mobile/feature/core/widgets/app_header.dart';
 import 'package:asiapp_mobile/feature/core/widgets/app_bottom_nav.dart';
+import 'package:asiapp_mobile/feature/core/theme/app_colors.dart';
+import 'package:asiapp_mobile/feature/core/theme/app_text_styles.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../perfil/perfil_screen.dart';
 import '../core/data/firebase_repository.dart';
 
-const _ink = Color(0xFFF4FAFF);
-const _muted = Color(0xFFB5C8D8);
-const _paper = Color(0xFF020A12);
-const _surface = Color(0xFF0B2D4D);
-const _line = Color(0xFF245274);
-const _teal = Color(0xFF007FFF);  
-const _coral = Color(0xFFFF6B6B);
+// Cores auxiliares que não existem no core (app_colors.dart) porque são
+// específicas de indicadores financeiros (positivo/negativo). O resto da
+// tela usa AppColors/AppTextStyles.
 const _green = Color(0xFF6FD8C0);
+const _borderOnDark = Color(0x33FFFFFF); // branco a ~20% sobre fundo escuro
 
 enum _EntryType { entrada, saida }
 
@@ -72,7 +71,7 @@ class GestaoFinanceira extends StatefulWidget {
 
 class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   int _tabIndex = 0;
-  DateTime _focusedMonth = DateTime(2026, 8);
+  DateTime _focusedMonth = DateTime(2026, 9);
   String _typeFilter = 'Todos';
   String _categoryFilter = 'Todas';
   String _supplierFilter = 'Todos';
@@ -80,42 +79,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
       _entriesSubscription;
 
-  final List<_FinancialEntry> _entries = [
-    _FinancialEntry(
-      title: 'Contrato Portal de Clientes',
-      supplier: 'Cliente Portal',
-      category: 'Faturamento',
-      date: DateTime(2026, 8, 8),
-      amount: 48000,
-      type: _EntryType.entrada,
-    ),
-    _FinancialEntry(
-      title: 'Mensalidade coworking',
-      supplier: 'Hub Itajubá',
-      category: 'Operacional',
-      date: DateTime(2026, 8, 10),
-      amount: 1850,
-      type: _EntryType.saida,
-      attachment: 'nota_coworking.pdf',
-    ),
-    _FinancialEntry(
-      title: 'Serviços de contabilidade',
-      supplier: 'Contábil Asimov',
-      category: 'Impostos',
-      date: DateTime(2026, 8, 15),
-      amount: 920,
-      type: _EntryType.saida,
-      attachment: 'comprovante_contabil.jpg',
-    ),
-    _FinancialEntry(
-      title: 'Expansão Asimov',
-      supplier: 'Cliente Expansão',
-      category: 'Faturamento',
-      date: DateTime(2026, 8, 22),
-      amount: 12000,
-      type: _EntryType.entrada,
-    ),
-  ];
+  final List<_FinancialEntry> _entries = [];
 
   @override
   void initState() {
@@ -125,7 +89,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
         .orderBy('date', descending: true)
         .snapshots()
         .listen((snapshot) {
-      if (!mounted || snapshot.docs.isEmpty) return;
+      if (!mounted) return;
       setState(() {
         _entries
           ..clear()
@@ -190,10 +154,8 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                         subtitle: 'Acompanhe e gerencie todas as financias da empresa!',
                       ),
                       const SizedBox(height: 16),
-                      _buildHeader(),
-                      const SizedBox(height: 22),
                       _buildTabs(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
                       if (_tabIndex == 0)
                         _buildCalendarTab()
                       else if (_tabIndex == 1)
@@ -208,15 +170,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
           ),
         ),
       ),
-      floatingActionButton: _tabIndex == 1
-          ? FloatingActionButton.extended(
-              onPressed: _showEntryDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Novo lançamento'),
-              backgroundColor: _teal,
-              foregroundColor: _ink,
-            )
-          : null,
+      floatingActionButton: _tabIndex == 1 ? _buildCreateEntryButton() : null,
       bottomNavigationBar: AppBottomNav(
         currentTab: AppTab.financeiro,
         profile: widget.currentProfile,
@@ -224,12 +178,57 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     );
   }
 
+  // Botão flutuante "+ Novo lançamento": mesmo formato de um
+  // FloatingActionButton.extended, mas com o fundo em gradiente
+  // azul (#007FFF) -> preto, da esquerda pra direita — igual ao
+  // botão "+ Cadastrar projeto" da tela de Projetos.
+  Widget _buildCreateEntryButton() => Material(
+    color: Colors.transparent,
+    borderRadius: BorderRadius.circular(28),
+    elevation: 4,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: _showEntryDialog,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              AppColors.primary,
+              Color.alphaBlend(
+                Colors.black.withValues(alpha: 0.8),
+                AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add, color: AppColors.white),
+            const SizedBox(width: 8),
+            Text(
+              'Novo lançamento',
+              style: AppTextStyles.button.copyWith(color: AppColors.white),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _buildAccessDenied() => Scaffold(
-    backgroundColor: _paper,
+    backgroundColor: AppColors.ink,
     appBar: AppBar(
-      title: const Text('Gestão financeira'),
-      backgroundColor: _paper,
-      foregroundColor: _ink,
+      title: Text(
+        'Gestão financeira',
+        style: AppTextStyles.h2.copyWith(color: AppColors.white),
+      ),
+      backgroundColor: AppColors.ink,
+      foregroundColor: AppColors.white,
     ),
     body: Center(
       child: Padding(
@@ -237,30 +236,29 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline_rounded, size: 52, color: _coral),
+            Icon(Icons.lock_outline_rounded, size: 52, color: AppColors.coral),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Acesso restrito',
-              style: TextStyle(
-                fontSize: 24,
+              style: AppTextStyles.h1.copyWith(
+                color: AppColors.white,
                 fontWeight: FontWeight.w800,
-                color: _ink,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Esta área está disponível apenas para a Presidência e a Diretoria.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: _muted),
+              style: AppTextStyles.body.copyWith(color: AppColors.muted),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Voltar'),
+              label: Text('Voltar', style: AppTextStyles.button),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _teal,
-                side: const BorderSide(color: _teal),
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
               ),
             ),
           ],
@@ -269,26 +267,10 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     ),
   );
 
-  Widget _buildHeader() => Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      if (_tabIndex != 0)
-        OutlinedButton.icon(
-          onPressed: _showEntryDialog,
-          icon: const Icon(Icons.upload_file_outlined),
-          label: const Text('Enviar comprovante'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _teal,
-            side: const BorderSide(color: _teal),
-          ),
-        ),
-    ],
-  );
-
   Widget _buildTabs() => Container(
     decoration: BoxDecoration(
-      color: _surface,
-      border: Border.all(color: _line),
+      color: AppColors.primaryDark,
+      border: Border.all(color: _borderOnDark),
       borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
@@ -305,7 +287,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: _tabIndex == index ? _teal : Colors.transparent,
+          color: _tabIndex == index ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
         ),
         child: Row(
@@ -314,13 +296,13 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
             Icon(
               icon,
               size: 18,
-              color: _tabIndex == index ? Colors.white : _muted,
+              color: _tabIndex == index ? AppColors.white : AppColors.muted,
             ),
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                color: _tabIndex == index ? Colors.white : _muted,
+              style: AppTextStyles.caption.copyWith(
+                color: _tabIndex == index ? AppColors.white : AppColors.muted,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -332,7 +314,6 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
 
   Widget _buildCalendarTab() => Column(
     children: [
-      _buildKpis(),
       const SizedBox(height: 20),
       _panel(
         child: Column(
@@ -346,16 +327,15 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                       _focusedMonth.month - 1,
                     ),
                   ),
-                  icon: const Icon(Icons.chevron_left),
+                  icon: const Icon(Icons.chevron_left, color: AppColors.white),
                 ),
                 Expanded(
                   child: Text(
                     _monthLabel(_focusedMonth),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: AppTextStyles.h2.copyWith(
+                      color: AppColors.white,
                       fontWeight: FontWeight.w800,
-                      color: _ink,
                     ),
                   ),
                 ),
@@ -366,7 +346,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                       _focusedMonth.month + 1,
                     ),
                   ),
-                  icon: const Icon(Icons.chevron_right),
+                  icon: const Icon(Icons.chevron_right, color: AppColors.white),
                 ),
               ],
             ),
@@ -377,9 +357,18 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       const SizedBox(height: 20),
       _sectionTitle('Próximos compromissos'),
       const SizedBox(height: 10),
-      ..._entries
-          .where((entry) => entry.date.isAfter(DateTime(2026, 8, 23)))
-          .map(_entryTile),
+      if (_entries.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Nenhum lançamento encontrado.',
+            style: AppTextStyles.body.copyWith(color: AppColors.muted),
+          ),
+        )
+      else
+        ..._entries
+            .where((entry) => entry.date.isAfter(DateTime.now()))
+            .map(_entryTile),
     ],
   );
 
@@ -396,8 +385,8 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                   child: Center(
                     child: Text(
                       day,
-                      style: const TextStyle(
-                        color: _muted,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.muted,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -428,10 +417,10 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                 )
                 .toList();
             final color = entries.isEmpty
-                ? _surface
+                ? AppColors.primaryDark
                 : entries.first.type == _EntryType.entrada
                 ? _green.withAlpha(24)
-                : _coral.withAlpha(24);
+                : AppColors.coral.withAlpha(24);
             return Container(
               decoration: BoxDecoration(
                 color: color,
@@ -442,9 +431,9 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                 children: [
                   Text(
                     '$day',
-                    style: const TextStyle(
+                    style: AppTextStyles.body.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: _ink,
+                      color: AppColors.white,
                     ),
                   ),
                   if (entries.isNotEmpty)
@@ -453,7 +442,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                       size: 6,
                       color: entries.first.type == _EntryType.entrada
                           ? _green
-                          : _coral,
+                          : AppColors.coral,
                     ),
                 ],
               ),
@@ -467,53 +456,115 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   Widget _buildEntriesTab() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildKpis(),
       const SizedBox(height: 24),
-      _sectionTitle('Filtrar lançamentos'),
-      const SizedBox(height: 10),
-      Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          _filter('Tipo', _typeFilter, [
-            'Todos',
-            'Entradas',
-            'Saídas',
-          ], (value) => setState(() => _typeFilter = value!)),
-          _filter('Valor', _valueFilter, [
-            'Todos',
-            'Até R\$ 2 mil',
-            'Acima de R\$ 2 mil',
-          ], (value) => setState(() => _valueFilter = value!)),
-          _filter(
-            'Fornecedor',
-            _supplierFilter,
-            [
-              'Todos',
-              ...{..._entries.map((entry) => entry.supplier)},
-            ],
-            (value) => setState(() => _supplierFilter = value!),
-          ),
-          _filter(
-            'Categoria',
-            _categoryFilter,
-            [
-              'Todas',
-              ...{..._entries.map((entry) => entry.category)},
-            ],
-            (value) => setState(() => _categoryFilter = value!),
-          ),
-        ],
-      ),
+      _buildEntryFilters(),
       const SizedBox(height: 18),
-      ..._filteredEntries.map(_entryTile),
+      if (_filteredEntries.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Nenhum lançamento encontrado.',
+            style: AppTextStyles.body.copyWith(color: AppColors.muted),
+          ),
+        )
+      else
+        ..._filteredEntries.map(_entryTile),
     ],
+  );
+
+  Widget _buildEntryFilters() => Theme(
+    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+    child: ExpansionTile(
+      title: Text(
+        'Filtros de busca',
+        style: AppTextStyles.body.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      leading: const Icon(Icons.filter_alt_outlined, color: AppColors.white),
+      iconColor: AppColors.white,
+      collapsedIconColor: AppColors.white,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _filter('Tipo', _typeFilter, [
+                      'Todos',
+                      'Entradas',
+                      'Saídas',
+                    ], (value) => setState(() => _typeFilter = value!)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _filter('Valor', _valueFilter, [
+                      'Todos',
+                      'Até R\$ 2 mil',
+                      'Acima de R\$ 2 mil',
+                    ], (value) => setState(() => _valueFilter = value!)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _filter(
+                      'Fornecedor',
+                      _supplierFilter,
+                      [
+                        'Todos',
+                        ...{..._entries.map((entry) => entry.supplier)},
+                      ],
+                      (value) => setState(() => _supplierFilter = value!),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _filter(
+                      'Categoria',
+                      _categoryFilter,
+                      [
+                        'Todas',
+                        ...{..._entries.map((entry) => entry.category)},
+                      ],
+                      (value) => setState(() => _categoryFilter = value!),
+                    ),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => setState(() {
+                    _typeFilter = 'Todos';
+                    _valueFilter = 'Todos';
+                    _supplierFilter = 'Todos';
+                    _categoryFilter = 'Todas';
+                  }),
+                  child: Text(
+                    'Limpar filtros',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 
   Widget _buildReportsTab() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildKpis(),
       const SizedBox(height: 24),
       _sectionTitle('Fluxo de caixa'),
       const SizedBox(height: 10),
@@ -521,16 +572,19 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Agosto 2026', style: TextStyle(color: _muted)),
+            Text(
+              _monthLabel(DateTime.now()),
+              style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+            ),
             const SizedBox(height: 18),
             _reportLine('Entradas', _totalEntries, _green),
             const SizedBox(height: 14),
-            _reportLine('Saídas', _totalExits, _coral),
-            const Divider(),
+            _reportLine('Saídas', _totalExits, AppColors.coral),
+            Divider(color: _borderOnDark),
             _reportLine(
               'Saldo projetado',
               _totalEntries - _totalExits,
-              _teal,
+              AppColors.primary,
               strong: true,
             ),
           ],
@@ -546,61 +600,11 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
         return _reportLine(
           category,
           total,
-          category == 'Faturamento' ? _green : _coral,
+          category == 'Faturamento' ? _green : AppColors.coral,
         );
       }),
     ],
   );
-
-  Widget _buildKpis() => Wrap(
-    spacing: 12,
-    runSpacing: 12,
-    children: [
-      _kpi('A receber', _totalEntries, _green, Icons.trending_up_rounded),
-      _kpi('A pagar', _totalExits, _coral, Icons.trending_down_rounded),
-      _kpi(
-        'Saldo',
-        _totalEntries - _totalExits,
-        _teal,
-        Icons.account_balance_wallet_outlined,
-      ),
-    ],
-  );
-
-  Widget _kpi(String label, double value, Color color, IconData icon) =>
-      SizedBox(
-        width: 220,
-        child: _panel(
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withAlpha(24),
-                foregroundColor: color,
-                child: Icon(icon),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(color: _muted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}',
-                    style: const TextStyle(
-                      color: _ink,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
 
   Widget _entryTile(_FinancialEntry entry) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
@@ -608,9 +612,11 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(
-          backgroundColor: (entry.type == _EntryType.entrada ? _green : _coral)
-              .withAlpha(24),
-          foregroundColor: entry.type == _EntryType.entrada ? _green : _coral,
+          backgroundColor:
+              (entry.type == _EntryType.entrada ? _green : AppColors.coral)
+                  .withAlpha(24),
+          foregroundColor:
+              entry.type == _EntryType.entrada ? _green : AppColors.coral,
           child: Icon(
             entry.type == _EntryType.entrada
                 ? Icons.arrow_downward
@@ -619,16 +625,19 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
         ),
         title: Text(
           entry.title,
-          style: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.white,
+          ),
         ),
         subtitle: Text(
           '${entry.supplier}  •  ${entry.category}\n${_dateLabel(entry.date)}${entry.attachment == null ? '' : '  •  ${entry.attachment}'}',
-          style: const TextStyle(color: _muted),
+          style: AppTextStyles.caption.copyWith(color: AppColors.muted),
         ),
         trailing: Text(
           '${entry.type == _EntryType.entrada ? '+' : '-'} R\$ ${entry.amount.toStringAsFixed(2).replaceAll('.', ',')}',
-          style: TextStyle(
-            color: entry.type == _EntryType.entrada ? _green : _coral,
+          style: AppTextStyles.body.copyWith(
+            color: entry.type == _EntryType.entrada ? _green : AppColors.coral,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -646,15 +655,15 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       Expanded(
         child: Text(
           label,
-          style: TextStyle(
-            color: strong ? _ink : _muted,
+          style: AppTextStyles.body.copyWith(
+            color: strong ? AppColors.white : AppColors.muted,
             fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),
       Text(
         'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}',
-        style: TextStyle(
+        style: AppTextStyles.body.copyWith(
           color: color,
           fontSize: strong ? 18 : 15,
           fontWeight: FontWeight.w800,
@@ -664,8 +673,8 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
   );
   Widget _sectionTitle(String title) => Text(
     title,
-    style: const TextStyle(
-      color: _ink,
+    style: AppTextStyles.h2.copyWith(
+      color: AppColors.white,
       fontSize: 19,
       fontWeight: FontWeight.w800,
     ),
@@ -674,8 +683,8 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     width: double.infinity,
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: _surface,
-      border: Border.all(color: _line),
+      color: AppColors.primaryDark,
+      border: Border.all(color: _borderOnDark),
       borderRadius: BorderRadius.circular(10),
     ),
     child: child,
@@ -685,28 +694,46 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
     String value,
     List<String> options,
     ValueChanged<String?> onChanged,
-  ) => SizedBox(
-    width: 210,
-    child: DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        filled: true,
-        fillColor: _surface,
-      ),
-      style: const TextStyle(color: _ink),
-      items: options
-          .map(
-            (option) => DropdownMenuItem(
-              value: option,
-              child: Text(option, overflow: TextOverflow.ellipsis),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
+  ) => DropdownButtonFormField<String>(
+    initialValue: value,
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
     ),
+    dropdownColor: AppColors.ink,
+    style: AppTextStyles.caption.copyWith(color: AppColors.white),
+    items: options
+        .map(
+          (option) => DropdownMenuItem(
+            value: option,
+            child: Text(option, overflow: TextOverflow.ellipsis),
+          ),
+        )
+        .toList(),
+    onChanged: onChanged,
   );
+
+  // Decoração padrão dos campos do formulário: fundo transparente
+  // (deixa o fundo do modal aparecer) e borda preta.
+  InputDecoration _formFieldDecoration(String label, {String? prefixText}) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: Colors.black, width: 1.2),
+    );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+      prefixText: prefixText,
+      prefixStyle: AppTextStyles.body.copyWith(color: AppColors.white),
+      filled: true,
+      fillColor: Colors.transparent,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      ),
+    );
+  }
 
   Future<void> _showEntryDialog() async {
     final title = TextEditingController();
@@ -720,7 +747,11 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Novo lançamento'),
+          backgroundColor: AppColors.primaryDark,
+          title: Text(
+            'Novo lançamento',
+            style: AppTextStyles.h2.copyWith(color: AppColors.white),
+          ),
           content: SizedBox(
             width: 440,
             child: SingleChildScrollView(
@@ -729,28 +760,30 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                 children: [
                   TextField(
                     controller: title,
-                    decoration: const InputDecoration(labelText: 'Descrição'),
+                    style: AppTextStyles.body.copyWith(color: AppColors.white),
+                    decoration: _formFieldDecoration('Descrição'),
                   ),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: supplier,
-                    decoration: const InputDecoration(
-                      labelText: 'Fornecedor / cliente',
-                    ),
+                    style: AppTextStyles.body.copyWith(color: AppColors.white),
+                    decoration: _formFieldDecoration('Fornecedor / cliente'),
                   ),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: amount,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Valor',
-                      prefixText: 'R\$ ',
-                    ),
+                    style: AppTextStyles.body.copyWith(color: AppColors.white),
+                    decoration: _formFieldDecoration('Valor', prefixText: 'R\$ '),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   DropdownButtonFormField<_EntryType>(
                     initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Tipo'),
+                    decoration: _formFieldDecoration('Tipo'),
+                    dropdownColor: AppColors.ink,
+                    style: AppTextStyles.caption.copyWith(color: AppColors.white),
                     items: const [
                       DropdownMenuItem(
                         value: _EntryType.entrada,
@@ -763,9 +796,12 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                     ],
                     onChanged: (value) => setDialogState(() => type = value!),
                   ),
+                  const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     initialValue: category,
-                    decoration: const InputDecoration(labelText: 'Categoria'),
+                    decoration: _formFieldDecoration('Categoria'),
+                    dropdownColor: AppColors.ink,
+                    style: AppTextStyles.caption.copyWith(color: AppColors.white),
                     items:
                         const [
                               'Faturamento',
@@ -783,10 +819,19 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                     onChanged: (value) =>
                         setDialogState(() => category = value!),
                   ),
+                  const SizedBox(height: 14),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Data: ${_dateLabel(date)}'),
-                    trailing: const Icon(Icons.calendar_today_outlined),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Colors.black, width: 1.2),
+                    ),
+                    tileColor: Colors.transparent,
+                    title: Text(
+                      'Data: ${_dateLabel(date)}',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.white),
+                    ),
+                    trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.white),
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: context,
@@ -797,6 +842,7 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                       if (picked != null) setDialogState(() => date = picked);
                     },
                   ),
+                  const SizedBox(height: 14),
                   OutlinedButton.icon(
                     onPressed: () => setDialogState(
                       () => attachment =
@@ -808,6 +854,10 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
                           ? 'Anexar nota ou comprovante'
                           : attachment!,
                     ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                    ),
                   ),
                 ],
               ),
@@ -816,9 +866,16 @@ class _GestaoFinanceiraState extends State<GestaoFinanceira> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text(
+                'Cancelar',
+                style: AppTextStyles.button.copyWith(color: AppColors.white),
+              ),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+              ),
               onPressed: () {
                 final parsedAmount = double.tryParse(
                   amount.text.replaceAll(',', '.'),

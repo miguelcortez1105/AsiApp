@@ -3,6 +3,12 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:asiapp_mobile/feature/postagens/evento.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
+
+const _borderOnDark = Color(0x33FFFFFF);
 
 class AbaCalendario extends StatefulWidget {
   const AbaCalendario({super.key});
@@ -93,6 +99,24 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     return mapa[diaSemHora] ?? [];
   }
 
+  InputDecoration _formFieldDecoration(String label) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: Colors.black, width: 1.2),
+    );
+    return InputDecoration(
+      labelText: label,
+      labelStyle: AppTextStyles.caption.copyWith(color: AppColors.white),
+      filled: true,
+      fillColor: Colors.transparent,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      ),
+    );
+  }
+
   void _abrirFormularioEvento({Evento? eventoParaEditar}) {
     final tituloController = TextEditingController(
       text: eventoParaEditar?.titulo ?? '',
@@ -108,32 +132,48 @@ class _AbaCalendarioState extends State<AbaCalendario> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
+              backgroundColor: AppColors.primaryDark,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Text(
                 eventoParaEditar == null ? 'Novo evento' : 'Editar evento',
+                style: AppTextStyles.h2.copyWith(color: AppColors.white),
               ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
                       controller: tituloController,
-                      decoration: const InputDecoration(labelText: 'Título'),
+                      style: AppTextStyles.body.copyWith(color: AppColors.white),
+                      decoration: _formFieldDecoration('Título'),
                     ),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: horarioController,
-                      decoration: const InputDecoration(
-                        labelText: 'Horário (ex: 18:00)',
-                      ),
+                      style: AppTextStyles.body.copyWith(color: AppColors.white),
+                      decoration: _formFieldDecoration('Horário (ex: 18:00)'),
                     ),
-                    const SizedBox(height: 12),
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('Áreas envolvidas'),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Áreas envolvidas',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     ..._coresPorArea.keys.map((area) {
                       return CheckboxListTile(
-                        title: Text(area),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          area,
+                          style: AppTextStyles.body.copyWith(color: AppColors.white),
+                        ),
                         value: areasSelecionadas.contains(area),
+                        activeColor: AppColors.primary,
+                        checkColor: AppColors.white,
                         onChanged: (marcado) {
                           setStateDialog(() {
                             if (marcado == true) {
@@ -151,9 +191,16 @@ class _AbaCalendarioState extends State<AbaCalendario> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
+                  child: Text(
+                    'Cancelar',
+                    style: AppTextStyles.button.copyWith(color: AppColors.white),
+                  ),
                 ),
-                TextButton(
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                  ),
                   onPressed: () async {
                     if (tituloController.text.trim().isEmpty) return;
                     if (areasSelecionadas.isEmpty) return;
@@ -202,14 +249,31 @@ class _AbaCalendarioState extends State<AbaCalendario> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir evento'),
-        content: Text('Deseja excluir "${evento.titulo}"?'),
+        backgroundColor: AppColors.primaryDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Excluir evento',
+          style: AppTextStyles.h2.copyWith(color: AppColors.white),
+        ),
+        content: Text(
+          'Deseja excluir "${evento.titulo}"?',
+          style: AppTextStyles.body.copyWith(color: AppColors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: AppTextStyles.button.copyWith(color: AppColors.white),
+            ),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.coral,
+              foregroundColor: AppColors.white,
+            ),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection('eventos')
@@ -243,7 +307,10 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                 ),
               ),
               const SizedBox(width: 4),
-              Text(entrada.key, style: const TextStyle(fontSize: 12)),
+              Text(
+                entrada.key,
+                style: AppTextStyles.caption.copyWith(color: AppColors.white),
+              ),
             ],
           );
         }).toList(),
@@ -257,10 +324,17 @@ class _AbaCalendarioState extends State<AbaCalendario> {
       stream: FirebaseFirestore.instance.collection('eventos').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Erro: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Erro: ${snapshot.error}',
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+            ),
+          );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         }
 
         final documentos = snapshot.data?.docs ?? [];
@@ -278,18 +352,22 @@ class _AbaCalendarioState extends State<AbaCalendario> {
 
         return Stack(
           children: [
-            Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Column(
-                    children: [
-                      TableCalendar(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryDark,
+                    border: Border.all(color: _borderOnDark),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TableCalendar(
                         firstDay: DateTime.utc(2025, 1, 1),
                         lastDay: DateTime.utc(2050, 12, 31),
                         focusedDay: _diaFocado,
@@ -302,6 +380,59 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                         },
                         locale: 'pt_BR',
                         eventLoader: (dia) => _eventosDoDia(eventosPorDia, dia),
+                        headerStyle: HeaderStyle(
+                          formatButtonVisible: false,
+                          titleCentered: true,
+                          titleTextFormatter: (date, locale) {
+                            final mes = DateFormat.yMMMM(locale).format(date);
+                            return mes[0].toUpperCase() + mes.substring(1);
+                          },
+                          titleTextStyle: AppTextStyles.h2.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          leftChevronIcon: const Icon(
+                            Icons.chevron_left,
+                            color: AppColors.white,
+                          ),
+                          rightChevronIcon: const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.white,
+                          ),
+                        ),
+                        rowHeight: 40,
+                        daysOfWeekHeight: 18,
+                        daysOfWeekStyle: DaysOfWeekStyle(
+                          weekdayStyle: AppTextStyles.caption.copyWith(
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          weekendStyle: AppTextStyles.caption.copyWith(
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        calendarStyle: CalendarStyle(
+                          defaultTextStyle: AppTextStyles.body.copyWith(color: AppColors.white),
+                          weekendTextStyle: AppTextStyles.body.copyWith(color: AppColors.white),
+                          outsideTextStyle: AppTextStyles.body.copyWith(color: AppColors.muted),
+                          todayDecoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(90),
+                            shape: BoxShape.circle,
+                          ),
+                          todayTextStyle: AppTextStyles.body.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          selectedDecoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          selectedTextStyle: AppTextStyles.body.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         calendarBuilders: CalendarBuilders(
                           markerBuilder: (context, dia, eventosDoDia) {
                             if (eventosDoDia.isEmpty) return null;
@@ -334,42 +465,65 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                         ),
                       ),
                       _buildLegenda(),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: eventosDoDiaAtual.isEmpty
-                            ? const Center(child: Text('Nenhum evento neste dia'))
-                            : ListView.builder(
-                                itemCount: eventosDoDiaAtual.length,
-                                itemBuilder: (context, index) {
-                                  final evento = eventosDoDiaAtual[index];
-                                  return ListTile(
-                                    leading: const Icon(Icons.event),
-                                    title: Text(evento.titulo),
-                                    subtitle: Text('${evento.horario} • ${evento.areas.join(', ')}'),
-                                    trailing: _podeEditarEventos
-                                        ? Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(Icons.edit, size: 20),
-                                                onPressed: () =>
-                                                    _abrirFormularioEvento(eventoParaEditar: evento),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                                                onPressed: () => _excluirEvento(evento),
-                                              ),
-                                            ],
-                                          )
-                                        : null,
-                                  );
-                                },
-                              ),
-                      ),
                     ],
                   ),
                 ),
               ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: eventosDoDiaAtual.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Nenhum evento neste dia',
+                            style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: eventosDoDiaAtual.length,
+                          itemBuilder: (context, index) {
+                            final evento = eventosDoDiaAtual[index];
+                            return ListTile(
+                              leading: const Icon(Icons.event, color: AppColors.white),
+                              title: Text(
+                                evento.titulo,
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${evento.horario} • ${evento.areas.join(', ')}',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+                              ),
+                              trailing: _podeEditarEventos
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            size: 20,
+                                            color: AppColors.primary,
+                                          ),
+                                          onPressed: () =>
+                                              _abrirFormularioEvento(eventoParaEditar: evento),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            size: 20,
+                                            color: AppColors.coral,
+                                          ),
+                                          onPressed: () => _excluirEvento(evento),
+                                        ),
+                                      ],
+                                    )
+                                  : null,
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
             if (_podeEditarEventos)
               Positioned(
@@ -377,6 +531,8 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                 bottom: 96,
                 child: FloatingActionButton(
                   onPressed: () => _abrirFormularioEvento(),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
                   child: const Icon(Icons.add),
                 ),
               ),

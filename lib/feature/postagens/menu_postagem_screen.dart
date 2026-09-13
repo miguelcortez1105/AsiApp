@@ -57,7 +57,7 @@ class _MenuPostagemScreenState extends State<MenuPostagemScreen>
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1280),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const ScreenHeader(
                           tela: 'P O S T A G E M',

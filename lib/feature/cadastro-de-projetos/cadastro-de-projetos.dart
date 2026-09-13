@@ -292,195 +292,232 @@ Widget _buildFilters() => Theme(
   );
 
   Future<void> _openProjectForm() async {
-    final nameController = TextEditingController();
-    final clientController = TextEditingController();
-    final valueController = TextEditingController();
-    var area = _areas.first;
-    var managerId = '';
-    var status = _statuses.first;
-    String? formError;
-    final selectedMemberIds = <String>{widget.currentProfile.uid};
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.viewInsetsOf(context).bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Novo projeto',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome do projeto',
-                  ),
-                ),
-                TextField(
-                  controller: clientController,
-                  decoration: const InputDecoration(labelText: 'Cliente'),
-                ),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Área responsável',
-                  ),
-                  initialValue: area,
-                  items: _areas
-                      .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setSheetState(() => area = value!),
-                ),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Gerente'),
-                  initialValue: managerId.isEmpty ? null : managerId,
-                  items: _people
-                      .map(
-                        (person) => DropdownMenuItem(
-                          value: person.uid,
-                          child: Text(person.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setSheetState(() => managerId = value ?? ''),
-                ),
-                const SizedBox(height: 12),
-                const Text('Equipe'),
-                Wrap(
-                  spacing: 8,
-                  children: _people
-                      .map(
-                        (person) => FilterChip(
-                          label: Text(person.name),
-                          selected: selectedMemberIds.contains(person.uid),
-                          onSelected: (selected) => setSheetState(() {
-                            if (selected) {
-                              selectedMemberIds.add(person.uid);
-                            } else {
-                              selectedMemberIds.remove(person.uid);
-                            }
-                          }),
-                        ),
-                      )
-                      .toList(),
-                ),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  initialValue: status,
-                  items: _statuses
-                      .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setSheetState(() => status = value!),
-                ),
-                TextField(
-                  controller: valueController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'Valor'),
-                ),
-                const SizedBox(height: 16),
-                if (formError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      formError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () async {
-                      if (nameController.text.trim().isEmpty ||
-                          selectedMemberIds.isEmpty) {
-                        setSheetState(
-                          () => formError =
-                              'Informe o nome e selecione ao menos uma pessoa.',
-                        );
-                        return;
-                      }
-                      PersonRecord? manager;
-                      for (final person in _people) {
-                        if (person.uid == managerId) manager = person;
-                      }
-                      final value =
-                          double.tryParse(
-                            valueController.text.replaceAll(',', '.'),
-                          ) ??
-                          0;
-                      try {
-                        await FirebaseRepository.instance.saveProject(
-                          data: {
-                            'name': nameController.text.trim(),
-                            'client': clientController.text.trim(),
-                            'area': area,
-                            'manager':
-                                manager?.name ?? widget.currentProfile.name,
-                            'managerId': managerId.isEmpty
-                                ? widget.currentProfile.uid
-                                : managerId,
-                            'memberIds': selectedMemberIds.toList(),
-                            'members': '${selectedMemberIds.length} pessoas',
-                            'value': 'R\$ ${value.toStringAsFixed(2)}',
-                            'progress': 0,
-                            'status': status,
-                            'color': '087E8B',
-                            'createdBy': widget.currentProfile.uid,
-                          },
-                        );
-                        if (sheetContext.mounted)
-                        {
-                          FocusScope.of(sheetContext).unfocus(); 
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (sheetContext.mounted) Navigator.pop(sheetContext);
-                          });
-                        }
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Projeto cadastrado com sucesso.'),
-                            ),
-                          );
-                        }
-                      } catch (_) {
-                        if (sheetContext.mounted) {
-                          setSheetState(
-                            () => formError =
-                                'Não foi possível cadastrar o projeto. Verifique sua permissão e tente novamente.',
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Cadastrar projeto'),
-                  ),
-                ),
-              ],
+      builder: (_) => _NewProjectSheet(
+        currentProfile: widget.currentProfile,
+        initialArea: _areas.first,
+        initialManagerId: '',
+        initialStatus: _statuses.first,
+        initialSelectedMemberIds: {widget.currentProfile.uid},
+        people: _people,
+        areas: _areas,
+        statuses: _statuses,
+      ),
+    );
+  }
+}
+
+class _NewProjectSheet extends StatefulWidget {
+  const _NewProjectSheet({
+    required this.currentProfile,
+    required this.initialArea,
+    required this.initialManagerId,
+    required this.initialStatus,
+    required this.initialSelectedMemberIds,
+    required this.people,
+    required this.areas,
+    required this.statuses,
+  });
+
+  final UserProfile currentProfile;
+  final String initialArea;
+  final String initialManagerId;
+  final String initialStatus;
+  final Set<String> initialSelectedMemberIds;
+  final List<PersonRecord> people;
+  final List<String> areas;
+  final List<String> statuses;
+
+  @override
+  State<_NewProjectSheet> createState() => _NewProjectSheetState();
+}
+
+class _NewProjectSheetState extends State<_NewProjectSheet> {
+  late final TextEditingController _nameController = TextEditingController();
+  late final TextEditingController _clientController = TextEditingController();
+  late final TextEditingController _valueController = TextEditingController();
+
+  late String _area = widget.initialArea;
+  late String _managerId = widget.initialManagerId;
+  late String _status = widget.initialStatus;
+  late final Set<String> _selectedMemberIds =
+      Set<String>.from(widget.initialSelectedMemberIds);
+  String? _formError;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _clientController.dispose();
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_nameController.text.trim().isEmpty || _selectedMemberIds.isEmpty) {
+      setState(
+        () => _formError = 'Informe o nome e selecione ao menos uma pessoa.',
+      );
+      return;
+    }
+
+    PersonRecord? manager;
+    for (final person in widget.people) {
+      if (person.uid == _managerId) {
+        manager = person;
+        break;
+      }
+    }
+
+    final value =
+        double.tryParse(_valueController.text.replaceAll(',', '.')) ?? 0;
+
+    try {
+      await FirebaseRepository.instance.saveProject(
+        data: {
+          'name': _nameController.text.trim(),
+          'client': _clientController.text.trim(),
+          'area': _area,
+          'manager': manager?.name ?? widget.currentProfile.name,
+          'managerId': _managerId.isEmpty ? widget.currentProfile.uid : _managerId,
+          'memberIds': _selectedMemberIds.toList(),
+          'members': '${_selectedMemberIds.length} pessoas',
+          'value': 'R\$ ${value.toStringAsFixed(2)}',
+          'progress': 0,
+          'status': _status,
+          'color': '087E8B',
+          'createdBy': widget.currentProfile.uid,
+        },
+      );
+
+      if (!mounted) return;
+
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      FocusScope.of(context).unfocus();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      if (messenger != null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Projeto cadastrado com sucesso.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _formError =
+            'Não foi possível cadastrar o projeto. Verifique sua permissão e tente novamente.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        20,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Novo projeto',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Nome do projeto'),
+            ),
+            TextField(
+              controller: _clientController,
+              decoration: const InputDecoration(labelText: 'Cliente'),
+            ),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Área responsável',
+              ),
+              initialValue: _area,
+              items: widget.areas
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _area = value!),
+            ),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Gerente'),
+              initialValue: _managerId.isEmpty ? null : _managerId,
+              items: widget.people
+                  .map(
+                    (person) => DropdownMenuItem(
+                      value: person.uid,
+                      child: Text(person.name),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _managerId = value ?? ''),
+            ),
+            const SizedBox(height: 12),
+            const Text('Equipe'),
+            Wrap(
+              spacing: 8,
+              children: widget.people
+                  .map(
+                    (person) => FilterChip(
+                      label: Text(person.name),
+                      selected: _selectedMemberIds.contains(person.uid),
+                      onSelected: (selected) => setState(() {
+                        if (selected) {
+                          _selectedMemberIds.add(person.uid);
+                        } else {
+                          _selectedMemberIds.remove(person.uid);
+                        }
+                      }),
+                    ),
+                  )
+                  .toList(),
+            ),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Status'),
+              initialValue: _status,
+              items: widget.statuses
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _status = value!),
+            ),
+            TextField(
+              controller: _valueController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Valor'),
+            ),
+            const SizedBox(height: 16),
+            if (_formError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _formError!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _submit,
+                child: const Text('Cadastrar projeto'),
+              ),
+            ),
+          ],
         ),
       ),
     );
-    nameController.dispose();
-    clientController.dispose();
-    valueController.dispose();
   }
 }

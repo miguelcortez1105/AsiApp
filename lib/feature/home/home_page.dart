@@ -13,12 +13,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'models/dashboard_metrics.dart';
 
-const _ink = Color(0xFF17212B);
-const _muted = Color(0xFF6E7A86);
-const _line = Color(0xFFE3E8EB);
-const _teal = Color(0xFF087E8B);
-const _coral = Color(0xFFE76F51);
-
 class Project {
   const Project({
     this.id = '',
@@ -71,53 +65,6 @@ class Project {
   }
 }
 
-const projects = [
-  Project(
-    id: 'demo-portal',
-    name: 'Portal de Clientes',
-    area: 'Digital',
-    manager: 'Miguel',
-    members: '6 pessoas',
-    value: 'R\$ 480 mil',
-    progress: 0.78,
-    status: 'No prazo',
-    color: _teal,
-  ),
-  Project(
-    id: 'demo-expansao',
-    name: 'Expansão Asimov',
-    area: 'Operações',
-    manager: 'Matheus',
-    members: '9 pessoas',
-    value: 'R\$ 1,2 mi',
-    progress: 0.54,
-    status: 'Atenção',
-    color: _coral,
-  ),
-  Project(
-    id: 'demo-academia',
-    name: 'Academia de Itajubá',
-    area: 'Pessoas',
-    manager: 'Matheus',
-    members: '4 pessoas',
-    value: 'R\$ 215 mil',
-    progress: 0.36,
-    status: 'No prazo',
-    color: Color(0xFF4C6FFF),
-  ),
-  Project(
-    id: 'demo-dados',
-    name: 'Modernização de Dados',
-    area: 'Tecnologia',
-    manager: 'Leo',
-    members: '8 pessoas',
-    value: 'R\$ 860 mil',
-    progress: 0.22,
-    status: 'Em risco',
-    color: Color(0xFF9B5DE5),
-  ),
-];
-
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
@@ -138,10 +85,7 @@ class _HomePageState extends State<HomePage> {
 
   late UserProfile _profile = widget.profile;
 
-  late List<Project> _projects =
-      Hierarchy.canManageProjects(widget.profile.role)
-       ? projects 
-       : [];
+  List<Project> _projects = [];
 
   StreamSubscription<List<Project>>? _projectsSubscription;
 
@@ -316,11 +260,6 @@ Widget build(BuildContext context) {
   Widget _buildHeader(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Align(
-        alignment: Alignment.topLeft,
-        child: _buildProfileButton(context),
-      ),
-      const SizedBox(height: 24), // Espaçamento entre o botão e o texto central
       Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -333,10 +272,9 @@ Widget build(BuildContext context) {
           ),
           const SizedBox(height: 8),
           Text(
-            'Bem vindo, “${_profile.name.split(' ').first}”!', // Aspas adicionadas
-            style: AppTextStyles.display.copyWith(
-              color: AppColors.white,
-              fontSize: 28, // Fonte em destaque
+            'Bem vindo, ${_profile.name.split(' ').first}!', // Aspas adicionadas
+            style: AppTextStyles.h2.copyWith(
+              color: AppColors.white, // Fonte em destaque
             ),
             textAlign: TextAlign.center,
           ),
@@ -349,6 +287,11 @@ Widget build(BuildContext context) {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+      const SizedBox(height: 24),
+      Align(
+        alignment: Alignment.topLeft,
+        child: _buildProfileButton(context),
       ),
     ],
   );
@@ -371,7 +314,7 @@ Widget build(BuildContext context) {
             const SizedBox(height: 4), 
             Text(
               'AsiPerfil',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.caption.copyWith(
                 color: AppColors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -818,6 +761,8 @@ class _ProjectCard extends StatelessWidget {
                 ),
               ),
             ),
+            // Gerente jogado bem pra direita, já que o número de
+            // pessoas saiu dessa linha e desceu pra linha de baixo.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -841,19 +786,21 @@ class _ProjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            Row(
-              children: [
-                const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
-                const SizedBox(width: 6),
-                Text(
-                  project.members.replaceAll(RegExp(r'[^0-9]'), ''), 
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Número de pessoas do projeto, agora numa linha própria
+        // abaixo do cabeçalho, liberando espaço ali em cima.
+        Row(
+          children: [
+            const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              project.members.replaceAll(RegExp(r'[^0-9]'), ''),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),

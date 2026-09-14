@@ -84,7 +84,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   Map<DateTime, List<Evento>> _agruparPorDia(List<Evento> eventos) {
     final Map<DateTime, List<Evento>> mapa = {};
     for (final evento in eventos) {
-      final diaSemHora = DateTime.utc(
+      final diaSemHora = DateTime(
         evento.data.year,
         evento.data.month,
         evento.data.day,
@@ -95,7 +95,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
   }
 
   List<Evento> _eventosDoDia(Map<DateTime, List<Evento>> mapa, DateTime dia) {
-    final diaSemHora = DateTime.utc(dia.year, dia.month, dia.day);
+    final diaSemHora = DateTime(dia.year, dia.month, dia.day);
     return mapa[diaSemHora] ?? [];
   }
 
@@ -206,7 +206,7 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                     if (areasSelecionadas.isEmpty) return;
 
                     final diaEscolhido = _diaSelecionado ?? _diaFocado;
-                    final diaSemHora = DateTime.utc(
+                    final diaSemHora = DateTime(
                       diaEscolhido.year,
                       diaEscolhido.month,
                       diaEscolhido.day,
@@ -368,8 +368,8 @@ class _AbaCalendarioState extends State<AbaCalendario> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TableCalendar(
-                        firstDay: DateTime.utc(2025, 1, 1),
-                        lastDay: DateTime.utc(2050, 12, 31),
+                        firstDay: DateTime(2025, 1, 1),
+                        lastDay: DateTime(2050, 12, 31),
                         focusedDay: _diaFocado,
                         selectedDayPredicate: (dia) => isSameDay(_diaSelecionado, dia),
                         onDaySelected: (diaSelecionado, diaFocado) {

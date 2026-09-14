@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/data/firebase_repository.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
+import '../core/widgets/app_background.dart';
 
 class UserProfile {
   const UserProfile({
@@ -62,17 +65,21 @@ class PerfilScreen extends StatefulWidget {
 class _PerfilScreenState extends State<PerfilScreen>{
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  late final TextEditingController _emailController;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
     _nomeController.text = widget.profile.name;
+    _emailController = TextEditingController(text: widget.profile.email);
   }
 
   @override
   void dispose() {
     _nomeController.dispose();
     _senhaController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -117,78 +124,161 @@ class _PerfilScreenState extends State<PerfilScreen>{
     }
   }
 
+  Widget _field(
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool obscureText = false,
+    bool readOnly = false,
+    Widget? suffix,
+  }) => TextField(
+    controller: controller,
+    readOnly: readOnly,
+    obscureText: obscureText,
+    style: AppTextStyles.caption.copyWith(
+      color: readOnly ? AppColors.muted : AppColors.white,
+    ),
+    decoration: InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: AppColors.white),
+      suffixIcon: suffix,
+    ),
+  );
+
+  Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: AppTextStyles.caption.copyWith(
+        color: AppColors.white,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Meu Perfil')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: CircleAvatar(
-                radius: 50,
-                child: Text(
-                  _initials(widget.profile.name),
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppColors.white,
+        title: Text('Meu Perfil', style: AppTextStyles.h2.copyWith(color: AppColors.white)),
+      ),
+      body: AppBackground(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 900;
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 48 : 20,
+                  vertical: 20,
                 ),
-              )
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton(
-                onPressed: _changePhoto,
-                child: const Text ('Alterar foto'),
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            const Text('Nome'),
-            TextField(
-              controller: _nomeController,
-              decoration: const InputDecoration(
-                hintText: 'Digite seu nome',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: AppColors.primary,
+                              child: Text(
+                                _initials(widget.profile.name),
+                                style: AppTextStyles.h1.copyWith(
+                                  color: AppColors.white,
+                                  fontSize: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: TextButton(
+                              onPressed: _changePhoto,
+                              child: Text(
+                                'Alterar foto',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-            const Text('E-mail'),
-            TextField(
-              controller: TextEditingController(text: widget.profile.email),
-              readOnly: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
+                          _field(_nomeController, 'Nome', Icons.person_outline),
+                          const SizedBox(height: 8),
 
-            const Text('Senha'),
-            TextField(
-              controller: _senhaController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'Digite nova senha',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
+                          _field(
+                            _emailController,
+                            'E-mail',
+                            Icons.mail_outline,
+                            readOnly: true,
+                          ),
+                          const SizedBox(height: 8),
 
-            const Text('Cargo'),
-            Text(
-              widget.profile.role,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
+                          _field(
+                            _senhaController,
+                            'Digite nova senha',
+                            Icons.lock_outline,
+                            obscureText: _obscurePassword,
+                            suffix: IconButton(
+                              tooltip: 'Mostrar senha',
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
-            Center(
-              child: ElevatedButton(
-                onPressed: _saveProfile,
-                child: const Text('Salvar alterações'),
-              ),//child
-            ),
-          ], //children
+                          _fieldLabel('Cargo'),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              widget.profile.role,
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          SizedBox(
+                           
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.white,
+                              ),
+                              onPressed: _saveProfile,
+                              child: const Text('Salvar alterações'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

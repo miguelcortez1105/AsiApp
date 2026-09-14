@@ -6,6 +6,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
+
+
+const _borderOnDark = Color(0x33FFFFFF);
+
 class AbaCadastroPostagem extends StatefulWidget {
   const AbaCadastroPostagem({super.key});
 
@@ -23,18 +29,28 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
   Future<void> _selecionarImagem() async {
     final origem = await showModalBottomSheet<ImageSource>(
       context: context,
+      backgroundColor: AppColors.primaryDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Escolher da galeria'),
+                leading: const Icon(Icons.photo_library, color: AppColors.white),
+                title: Text(
+                  'Escolher da galeria',
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                ),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Tirar foto'),
+                leading: const Icon(Icons.photo_camera, color: AppColors.white),
+                title: Text(
+                  'Tirar foto',
+                  style: AppTextStyles.body.copyWith(color: AppColors.white),
+                ),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             ],
@@ -110,14 +126,31 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir postagem'),
-        content: const Text('Deseja excluir esta postagem?'),
+        backgroundColor: AppColors.primaryDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Excluir postagem',
+          style: AppTextStyles.h2.copyWith(color: AppColors.white),
+        ),
+        content: Text(
+          'Deseja excluir esta postagem?',
+          style: AppTextStyles.body.copyWith(color: AppColors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: AppTextStyles.button.copyWith(color: AppColors.white),
+            ),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.coral,
+              foregroundColor: AppColors.white,
+            ),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection('postagens')
@@ -138,6 +171,24 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     super.dispose();
   }
 
+  InputDecoration _formFieldDecoration(String hint) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: Colors.black, width: 1.2),
+    );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: AppTextStyles.caption.copyWith(color: AppColors.muted),
+      filled: true,
+      fillColor: Colors.transparent,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -148,10 +199,8 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
           TextField(
             controller: _textoController,
             maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'No que você está pensando?',
-              border: OutlineInputBorder(),
-            ),
+            style: AppTextStyles.body.copyWith(color: AppColors.white),
+            decoration: _formFieldDecoration('No que você está pensando?'),
           ),
           const SizedBox(height: 8),
           if (_imagemSelecionada != null)
@@ -170,7 +219,7 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
                   top: 4,
                   right: 4,
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: AppColors.white),
                     style: IconButton.styleFrom(backgroundColor: Colors.black54),
                     onPressed: () => setState(() => _imagemSelecionada = null),
                   ),
@@ -181,26 +230,36 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.image_outlined),
+                icon: const Icon(Icons.image_outlined, color: AppColors.white),
                 onPressed: _publicando ? null : _selecionarImagem,
               ),
               const Spacer(),
-              ElevatedButton(
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                ),
                 onPressed: _publicando ? null : _publicarPostagem,
                 child: _publicando
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.white,
+                        ),
                       )
                     : const Text('Publicar'),
               ),
             ],
           ),
-          const Divider(height: 32),
-          const Text(
+          Divider(height: 32, color: _borderOnDark),
+          Text(
             'Minhas postagens',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -212,16 +271,28 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Erro: ${snapshot.error}'));
+                  return Center(
+                    child: Text(
+                      'Erro: ${snapshot.error}',
+                      style: AppTextStyles.body.copyWith(color: AppColors.white),
+                    ),
+                  );
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
                 }
 
                 final documentos = snapshot.data?.docs ?? [];
 
                 if (documentos.isEmpty) {
-                  return const Center(child: Text('Você ainda não postou nada'));
+                  return Center(
+                    child: Text(
+                      'Você ainda não postou nada',
+                      style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
@@ -235,6 +306,11 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
+                      color: AppColors.primaryDark,
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(color: _borderOnDark),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
@@ -244,12 +320,15 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                  icon: const Icon(Icons.delete, size: 20, color: AppColors.coral),
                                   onPressed: () => _excluirPostagem(postagem),
                                 ),
                               ],
                             ),
-                            Text(postagem.texto),
+                            Text(
+                              postagem.texto,
+                              style: AppTextStyles.body.copyWith(color: AppColors.white),
+                            ),
                             if (postagem.imagemUrl != null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
@@ -275,6 +354,3 @@ class _AbaCadastroPostagemState extends State<AbaCadastroPostagem> {
     );
   }
 }
-
-
-

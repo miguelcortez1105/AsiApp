@@ -13,12 +13,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'models/dashboard_metrics.dart';
 
-const _ink = Color(0xFF17212B);
-const _muted = Color(0xFF6E7A86);
-const _line = Color(0xFFE3E8EB);
-const _teal = Color(0xFF087E8B);
-const _coral = Color(0xFFE76F51);
-
 class Project {
   const Project({
     this.id = '',
@@ -71,53 +65,6 @@ class Project {
   }
 }
 
-const projects = [
-  Project(
-    id: 'demo-portal',
-    name: 'Portal de Clientes',
-    area: 'Digital',
-    manager: 'Miguel',
-    members: '6 pessoas',
-    value: 'R\$ 480 mil',
-    progress: 0.78,
-    status: 'No prazo',
-    color: _teal,
-  ),
-  Project(
-    id: 'demo-expansao',
-    name: 'Expansão Asimov',
-    area: 'Operações',
-    manager: 'Matheus',
-    members: '9 pessoas',
-    value: 'R\$ 1,2 mi',
-    progress: 0.54,
-    status: 'Atenção',
-    color: _coral,
-  ),
-  Project(
-    id: 'demo-academia',
-    name: 'Academia de Itajubá',
-    area: 'Pessoas',
-    manager: 'Matheus',
-    members: '4 pessoas',
-    value: 'R\$ 215 mil',
-    progress: 0.36,
-    status: 'No prazo',
-    color: Color(0xFF4C6FFF),
-  ),
-  Project(
-    id: 'demo-dados',
-    name: 'Modernização de Dados',
-    area: 'Tecnologia',
-    manager: 'Leo',
-    members: '8 pessoas',
-    value: 'R\$ 860 mil',
-    progress: 0.22,
-    status: 'Em risco',
-    color: Color(0xFF9B5DE5),
-  ),
-];
-
 class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
@@ -138,10 +85,7 @@ class _HomePageState extends State<HomePage> {
 
   late UserProfile _profile = widget.profile;
 
-  late List<Project> _projects =
-      Hierarchy.canManageProjects(widget.profile.role)
-       ? projects 
-       : [];
+  List<Project> _projects = [];
 
   StreamSubscription<List<Project>>? _projectsSubscription;
 
@@ -316,11 +260,6 @@ Widget build(BuildContext context) {
   Widget _buildHeader(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Align(
-        alignment: Alignment.topLeft,
-        child: _buildProfileButton(context),
-      ),
-      const SizedBox(height: 24), // Espaçamento entre o botão e o texto central
       Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -328,15 +267,14 @@ Widget build(BuildContext context) {
             'H O M E',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.white,
-              letterSpacing: 4.0, // Espaçamento largo igual ao do print
+              letterSpacing: 4.0, 
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Bem vindo, “${_profile.name.split(' ').first}”!', // Aspas adicionadas
-            style: AppTextStyles.display.copyWith(
-              color: AppColors.white,
-              fontSize: 28, // Fonte em destaque
+            'Bem vindo, ${_profile.name.split(' ').first}!', 
+            style: AppTextStyles.h2.copyWith(
+              color: AppColors.white, 
             ),
             textAlign: TextAlign.center,
           ),
@@ -349,6 +287,11 @@ Widget build(BuildContext context) {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+      const SizedBox(height: 24),
+      Align(
+        alignment: Alignment.topLeft,
+        child: _buildProfileButton(context),
       ),
     ],
   );
@@ -364,14 +307,14 @@ Widget build(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.center, 
           children: [
             Container(
-              width: 42, // Tamanho do ícone um pouco maior
+              width: 42, 
               height: 42, 
               child: SvgPicture.asset('assets/images/icon_home.svg'),
             ),
             const SizedBox(height: 4), 
             Text(
               'AsiPerfil',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.caption.copyWith(
                 color: AppColors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -594,7 +537,7 @@ class _KpiCard extends StatelessWidget {
         Container(
           height: 70,
           decoration: BoxDecoration(
-            color: AppColors.primaryDark, // Utilizando a cor escura do tema
+            color: AppColors.primaryDark, 
             borderRadius: BorderRadius.circular(12),
           ),
           child: Stack(
@@ -603,7 +546,7 @@ class _KpiCard extends StatelessWidget {
                 widthFactor: data.progress.clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.primary, // Cor principal do tema
+                    color: AppColors.primary, 
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -801,8 +744,8 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.primary, // Cor azul vibrante
-      borderRadius: BorderRadius.circular(24), // Bordas mais arredondadas como no print
+      color: AppColors.primary,
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -841,57 +784,39 @@ class _ProjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            Row(
-              children: [
-                const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
-                const SizedBox(width: 6),
-                Text(
-                  project.members.replaceAll(RegExp(r'[^0-9]'), ''), 
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+           ],
+        ),
+        const SizedBox(height: 12),
+        
+        Row(
+          children: [
+            const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              project.members.replaceAll(RegExp(r'[^0-9]'), ''),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          'Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentes que sem placerat. In id cursus mi pretium tellus duis convallis.',
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.white.withOpacity(0.9),
-            height: 1.5,
-          ),
+        Row(
+          children: [
+            const Icon(Icons.folder_outlined, size: 16, color: AppColors.white),
+            const SizedBox(width: 6),
+            Text(
+              'Área: ${project.area}',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.white.withOpacity(0.9),
+              ),
+            ),
+          ],
         ),
       ],
     ),
   );
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-  final String status;
-  
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        status,
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 }
 
 class _Surface extends StatelessWidget {
@@ -904,7 +829,7 @@ class _Surface extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding ?? const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.ink, // Trocado para o azul muito escuro do seu tema
+      color: AppColors.ink, 
       borderRadius: BorderRadius.circular(16),
     ),
     child: child,

@@ -3,6 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'postagem.dart';
 
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
+
+const _borderOnDark = Color(0x33FFFFFF);
+
 class AbaFeedSocial extends StatefulWidget {
   const AbaFeedSocial({super.key});
 
@@ -54,15 +59,27 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Erro: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Erro: ${snapshot.error}',
+              style: AppTextStyles.body.copyWith(color: AppColors.white),
+            ),
+          );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         }
 
         final documentos = snapshot.data?.docs ?? [];
         if (documentos.isEmpty) {
-          return const Center(child: Text('Nenhuma postagem ainda'));
+          return Center(
+            child: Text(
+              'Nenhuma postagem ainda',
+              style: AppTextStyles.body.copyWith(color: AppColors.muted),
+            ),
+          );
         }
 
         return ListView.builder(
@@ -76,6 +93,11 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
+              color: AppColors.primaryDark,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: _borderOnDark),
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
@@ -84,6 +106,8 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
                     Row(
                       children: [
                         CircleAvatar(
+                          backgroundColor: AppColors.primary.withAlpha(40),
+                          foregroundColor: AppColors.primary,
                           backgroundImage: postagem.fotoAutorUrl != null
                               ? NetworkImage(postagem.fotoAutorUrl!)
                               : null,
@@ -94,12 +118,18 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
                         const SizedBox(width: 8),
                         Text(
                           postagem.nomeAutor,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(postagem.texto),
+                    Text(
+                      postagem.texto,
+                      style: AppTextStyles.body.copyWith(color: AppColors.white),
+                    ),
                     if (postagem.imagemUrl != null) ...[
                       const SizedBox(height: 8),
                       ClipRRect(
@@ -117,20 +147,26 @@ class _AbaFeedSocialState extends State<AbaFeedSocial> {
                         IconButton(
                           icon: Icon(
                             euCurti ? Icons.favorite : Icons.favorite_border,
-                            color: euCurti ? Colors.red : null,
+                            color: euCurti ? AppColors.coral : AppColors.white,
                           ),
                           onPressed: () => _alternarCurtida(postagem),
                         ),
-                        Text('${postagem.curtidas}'),
+                        Text(
+                          '${postagem.curtidas}',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.white),
+                        ),
                         const SizedBox(width: 16),
                         IconButton(
                           icon: Icon(
                             Icons.repeat,
-                            color: euRepostei ? Colors.green : null,
+                            color: euRepostei ? AppColors.primary : AppColors.white,
                           ),
                           onPressed: () => _alternarRepost(postagem),
                         ),
-                        Text('${postagem.repostagens}'),
+                        Text(
+                          '${postagem.repostagens}',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.white),
+                        ),
                       ],
                     ),
                   ],

@@ -109,16 +109,17 @@ class _PerfilScreenState extends State<PerfilScreen>{
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sair da conta'),
-        content: const Text('Tem certeza que deseja sair?'),
+        backgroundColor: AppColors.primaryDark,
+        title: Text('Sair da conta', style: AppTextStyles.body.copyWith(color: AppColors.white),),
+        content: Text('Tem certeza que deseja sair?', style: AppTextStyles.body.copyWith(color: AppColors.white),),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: AppTextStyles.body.copyWith(color: AppColors.white),),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sair'),
+            child: Text('Sair', style: AppTextStyles.body.copyWith(color: AppColors.white),),
           ),
         ],
       ),
@@ -306,7 +307,6 @@ class _PerfilScreenState extends State<PerfilScreen>{
 
                           const SizedBox(height: 12),
                           SizedBox(
-                            width: double.infinity,
                             child: OutlinedButton(
                               onPressed: _logout,
                               style: OutlinedButton.styleFrom(

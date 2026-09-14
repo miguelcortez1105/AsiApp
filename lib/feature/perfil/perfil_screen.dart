@@ -7,6 +7,7 @@ import '../core/data/firebase_repository.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/widgets/app_background.dart';
+import 'package:asiapp_mobile/feature/auth/login_page.dart';
 
 class UserProfile {
   const UserProfile({
@@ -102,6 +103,37 @@ class _PerfilScreenState extends State<PerfilScreen>{
       );
     }
     if (mounted) Navigator.of(context).pop(updatedProfile);
+  }
+
+  Future<void> _logout() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da conta'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    await FirebaseAuth.instance.signOut();
+
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    }
   }
 
   Future<void> _changePhoto() async {
@@ -269,6 +301,19 @@ class _PerfilScreenState extends State<PerfilScreen>{
                               ),
                               onPressed: _saveProfile,
                               child: const Text('Salvar alterações'),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _logout,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Theme.of(context).colorScheme.error,
+                                side: BorderSide(color: Theme.of(context).colorScheme.error),
+                              ),
+                              child: const Text('Sair da conta'),
                             ),
                           ),
                         ],
